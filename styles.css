@@ -106,6 +106,20 @@ body::before {
   margin: 0;
 }
 
+.brand-text-wrap .eyebrow {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.brand-text-wrap .brand {
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
 .eyebrow,
 .hero-kicker {
   letter-spacing: 0.18em;
