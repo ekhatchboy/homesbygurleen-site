@@ -140,7 +140,7 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--ink);
+  color: #c44d8a;
   text-decoration: none;
   font-size: 0.92rem;
   font-weight: 600;
