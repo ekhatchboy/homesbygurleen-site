@@ -107,7 +107,8 @@ body::before {
 }
 
 .brand-text-wrap .eyebrow {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--muted);
 }
 
