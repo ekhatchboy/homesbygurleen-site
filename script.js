@@ -188,6 +188,8 @@ function getDemoReply(text) {
 }
 
 function updateLeadProfile(text) {
+  const normalizedText = text.trim();
+
   if (!leadProfile.intent && /\b(buy|buying|buyer|purchase)\b/i.test(text)) {
     leadProfile.intent = "buyer";
   } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation)\b/i.test(text)) {
@@ -201,15 +203,22 @@ function updateLeadProfile(text) {
   }
 
   if (!leadProfile.area && /\b(in|near|around)\s+[a-z]/i.test(text)) {
-    leadProfile.area = text;
+    leadProfile.area = normalizedText;
+  } else if (
+    !leadProfile.area &&
+    leadProfile.intent &&
+    /^[A-Za-z][A-Za-z\s,'.-]{1,40}$/.test(normalizedText) &&
+    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|email|phone|call|text)\b/i.test(normalizedText)
+  ) {
+    leadProfile.area = normalizedText;
   }
 
   if (!leadProfile.budget && /\$|\b\d{3}k\b|\bmillion\b/i.test(text)) {
-    leadProfile.budget = text;
+    leadProfile.budget = normalizedText;
   }
 
   if (!leadProfile.contact && /\S+@\S+\.\S+|\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(text)) {
-    leadProfile.contact = text;
+    leadProfile.contact = normalizedText;
   }
 }
 
