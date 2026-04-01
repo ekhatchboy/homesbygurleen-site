@@ -29,14 +29,19 @@ const transcript = [
 
 const demoReplies = [
   {
-    test: (text) => !leadProfile.intent && /\b(buy|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
+    test: (text) => !leadProfile.intent && /\b(buy|buying|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
     reply:
       "Great. What area are you hoping to buy in?"
   },
   {
-    test: (text) => !leadProfile.intent && /\b(sell|seller|listing|home valuation|value my home)\b/i.test(text),
+    test: (text) => !leadProfile.intent && /\b(sell|selling|seller|listing|home valuation|value my home)\b/i.test(text),
     reply:
       "Absolutely. What city is the home in?"
+  },
+  {
+    test: (text) => !leadProfile.intent && /\b(referral|referrals|referred|relocation)\b/i.test(text),
+    reply:
+      "Of course. What area or city is the referral looking in?"
   },
   {
     test: (text) => !leadProfile.timeline && /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
@@ -163,14 +168,32 @@ function getDemoReply(text) {
     return "Perfect. The next best step would usually be a valuation call or listing consultation.";
   }
 
+  if (leadProfile.intent === "referral") {
+    if (!leadProfile.area) {
+      return "What area or city is the referral looking in?";
+    }
+
+    if (!leadProfile.timeline) {
+      return "Do you know their timeline yet?";
+    }
+
+    if (!leadProfile.contact) {
+      return "What's the best contact info for follow-up?";
+    }
+
+    return "Perfect. The next best step would usually be a referral follow-up or quick consultation.";
+  }
+
   return "What's the best email or phone number for follow-up?";
 }
 
 function updateLeadProfile(text) {
-  if (!leadProfile.intent && /\b(buy|buyer|purchase)\b/i.test(text)) {
+  if (!leadProfile.intent && /\b(buy|buying|buyer|purchase)\b/i.test(text)) {
     leadProfile.intent = "buyer";
-  } else if (!leadProfile.intent && /\b(sell|seller|listing|valuation)\b/i.test(text)) {
+  } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation)\b/i.test(text)) {
     leadProfile.intent = "seller";
+  } else if (!leadProfile.intent && /\b(referral|referrals|referred|relocation)\b/i.test(text)) {
+    leadProfile.intent = "referral";
   }
 
   if (!leadProfile.timeline && /\b(asap|soon|month|summer|spring|fall|winter|week)\b/i.test(text)) {
