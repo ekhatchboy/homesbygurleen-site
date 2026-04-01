@@ -31,6 +31,12 @@ body {
     url("https://www.thespruce.com/thmb/EKQq_yymrdnVFbCxGatwIHbNxF8=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/MomokoMortonnaka-interiors.com-994a2b4b2def490f97386faf429fe824.jpg") center center / cover fixed no-repeat;
 }
 
+body.home-page {
+  background:
+    linear-gradient(180deg, rgba(248, 242, 234, 0.36), rgba(241, 233, 223, 0.44)),
+    url("./living-room-background.png") center center / cover fixed no-repeat;
+}
+
 body::before {
   content: "";
   position: fixed;
