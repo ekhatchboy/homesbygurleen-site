@@ -29,29 +29,34 @@ const transcript = [
 
 const demoReplies = [
   {
-    test: (text) => /\b(buy|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
+    test: (text) => !leadProfile.intent && /\b(buy|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
     reply:
       "Great. What area are you hoping to buy in?"
   },
   {
-    test: (text) => /\b(sell|seller|listing|home valuation|value my home)\b/i.test(text),
+    test: (text) => !leadProfile.intent && /\b(sell|seller|listing|home valuation|value my home)\b/i.test(text),
     reply:
       "Absolutely. What city is the home in?"
   },
   {
-    test: (text) => /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
+    test: (text) => !leadProfile.timeline && /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
     reply:
       "Good to know. Are you already pre-approved, or still exploring financing?"
   },
   {
-    test: (text) => /\b(\$|budget|million|k\b|pre-approved|approved|cash)\b/i.test(text),
+    test: (text) => !leadProfile.budget && /\b(\$|budget|million|k\b|cash)\b/i.test(text),
     reply:
       "That gives me a solid picture. What's the best phone number or email for follow-up?"
   },
   {
-    test: (text) => /\b(@|email|phone|call me|text me)\b/i.test(text),
+    test: (text) => !leadProfile.contact && /\b(@|email|phone|call me|text me)\b/i.test(text),
     reply:
       "Perfect. The next best step would usually be a consult, a showing request, or a valuation call."
+  },
+  {
+    test: (text) => /\b(pre-approved|approved)\b/i.test(text),
+    reply:
+      "Nice, that makes the next step easier. What's the best phone number or email for follow-up?"
   }
 ];
 
@@ -122,16 +127,43 @@ function getDemoReply(text) {
     return "I can help with buying, selling, relocation, or referrals. Which of those best fits what you need?";
   }
 
-  const fallbackSequence = [
-    "What timeline are you working with?",
-    "Which area or neighborhood are you focused on?",
-    "Do you have a budget range in mind yet?",
-    "What's the best email or phone number for follow-up?"
-  ];
+  if (leadProfile.intent === "buyer") {
+    if (!leadProfile.area) {
+      return "Which area or neighborhood are you focused on?";
+    }
 
-  const nextReply = fallbackSequence[Math.min(fallbackStep, fallbackSequence.length - 1)];
-  fallbackStep += 1;
-  return nextReply;
+    if (!leadProfile.timeline) {
+      return "What timeline are you working with?";
+    }
+
+    if (!leadProfile.budget) {
+      return "Do you have a budget range in mind yet?";
+    }
+
+    if (!leadProfile.contact) {
+      return "What's the best email or phone number for follow-up?";
+    }
+
+    return "Perfect. The next best step would usually be a buyer consult or a showing request.";
+  }
+
+  if (leadProfile.intent === "seller") {
+    if (!leadProfile.area) {
+      return "What city or area is the home in?";
+    }
+
+    if (!leadProfile.timeline) {
+      return "How soon are you thinking of moving?";
+    }
+
+    if (!leadProfile.contact) {
+      return "What's the best email or phone number for follow-up?";
+    }
+
+    return "Perfect. The next best step would usually be a valuation call or listing consultation.";
+  }
+
+  return "What's the best email or phone number for follow-up?";
 }
 
 function updateLeadProfile(text) {
@@ -143,6 +175,10 @@ function updateLeadProfile(text) {
 
   if (!leadProfile.timeline && /\b(asap|soon|month|summer|spring|fall|winter|week)\b/i.test(text)) {
     leadProfile.timeline = text;
+  }
+
+  if (!leadProfile.area && /\b(in|near|around)\s+[a-z]/i.test(text)) {
+    leadProfile.area = text;
   }
 
   if (!leadProfile.budget && /\$|\b\d{3}k\b|\bmillion\b/i.test(text)) {
