@@ -98,7 +98,7 @@ body::before {
 .brand-text-wrap {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
 }
 
 .brand-text-wrap .eyebrow,
