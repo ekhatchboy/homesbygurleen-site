@@ -92,18 +92,23 @@ Because the domain is with GoDaddy, the simplest setup is:
 If you want the CRM running on Cloudflare Pages instead of Vercel:
 
 1. Push this project to GitHub.
-2. Create a Cloudflare Pages project from that repo.
-3. Set the build command to blank.
-4. Set the output directory to `.`.
-5. Add Cloudflare environment variables:
+2. In Cloudflare Pages, set the root directory to `cloudflare-crm`.
+3. Set the framework preset to `None`.
+4. Leave the build command blank.
+5. Leave the build output directory blank.
+6. Add Cloudflare environment variables:
    - `CRM_SHEETS_URL`
    - `CRM_API_TOKEN`
-6. In Google Apps Script, add a matching script property:
+7. In Google Apps Script, add a matching script property:
    - `CRM_API_TOKEN`
-7. Run `setupSheets()` once in Apps Script to create `Master Leads` and `Follow-Up Guide`.
-8. Open `/crm.html` on the deployed Cloudflare Pages site.
+8. Run `setupSheets()` once in Apps Script to create `Master Leads` and `Follow-Up Guide`.
+9. Open `/crm.html` on the deployed Cloudflare Pages site.
 
 This keeps the CRM server-side bridge on Cloudflare while Google Sheets remains the database.
+
+### Why the separate `cloudflare-crm` folder
+
+That folder contains only the Cloudflare CRM files and Pages Functions, so Cloudflare does not need to install the older Vercel tooling from the main site repo just to deploy the dashboard.
 
 ## Suggested assistant instructions
 

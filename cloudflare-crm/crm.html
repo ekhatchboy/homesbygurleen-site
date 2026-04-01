@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homes By Gurleen CRM</title>
+  <meta
+    name="description"
+    content="Private Homes By Gurleen CRM dashboard backed by Google Sheets."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="crm.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <p class="eyebrow">Private CRM</p>
+        <div class="brand-text">Homes By Gurleen</div>
+      </div>
+      <div class="topbar-note">Google Sheets powered dashboard</div>
+    </header>
+
+    <main class="crm-shell">
+      <section class="crm-hero">
+        <div class="crm-copy">
+          <p class="hero-kicker">Cloudflare Pages CRM</p>
+          <h1>Manage every lead in one calm, clean workspace.</h1>
+          <p class="hero-text">
+            This dashboard reads from your Google Sheet, lets you filter and update leads, and keeps follow-up work
+            organized without needing a full HubSpot subscription.
+          </p>
+        </div>
+        <div class="crm-status-card">
+          <span class="crm-status-label">Live source</span>
+          <strong>Master Leads</strong>
+          <p id="crmStatusText">Loading leads from your master sheet.</p>
+        </div>
+      </section>
+
+      <section class="crm-summary">
+        <article class="crm-metric">
+          <span>Total leads</span>
+          <strong id="metricTotal">0</strong>
+        </article>
+        <article class="crm-metric">
+          <span>New</span>
+          <strong id="metricNew">0</strong>
+        </article>
+        <article class="crm-metric">
+          <span>Active</span>
+          <strong id="metricActive">0</strong>
+        </article>
+        <article class="crm-metric">
+          <span>Due today or overdue</span>
+          <strong id="metricDue">0</strong>
+        </article>
+      </section>
+
+      <section class="crm-workspace">
+        <aside class="crm-sidebar">
+          <div class="crm-card crm-filter-card">
+            <div class="crm-card-heading">
+              <h2>Lead list</h2>
+              <button type="button" class="button button-secondary" id="refreshLeadsButton">Refresh</button>
+            </div>
+            <label class="crm-field">
+              <span>Search</span>
+              <input id="searchInput" type="search" placeholder="Search name, phone, email, area">
+            </label>
+            <label class="crm-field">
+              <span>Lead type</span>
+              <select id="leadTypeFilter">
+                <option value="">All lead types</option>
+                <option value="Buyer">Buyer</option>
+                <option value="Seller">Seller</option>
+                <option value="Investor">Investor</option>
+                <option value="Referral">Referral</option>
+                <option value="AI Chat">AI Chat</option>
+                <option value="Form Lead">Form Lead</option>
+              </select>
+            </label>
+            <label class="crm-field">
+              <span>Status</span>
+              <select id="leadStatusFilter">
+                <option value="">All statuses</option>
+                <option value="New">New</option>
+                <option value="Active">Active</option>
+                <option value="Warm">Warm</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="crm-lead-list" id="leadList">
+            <div class="crm-empty-state">Loading leads...</div>
+          </div>
+        </aside>
+
+        <section class="crm-detail-panel">
+          <div class="crm-card crm-detail-card" id="detailCard">
+            <div class="crm-empty-state crm-detail-empty">
+              Pick a lead from the left to review notes, follow-up timing, and contact details.
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="crm.js" type="module"></script>
+</body>
+</html>
