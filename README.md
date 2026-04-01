@@ -1,6 +1,6 @@
 # Realtor AI Agent Starter
 
-This project is now a simple realtor website plus a live OpenAI-ready backend for the HomesbyGurleen assistant.
+This project is now a simple realtor website plus a live OpenAI-ready backend for the Homes By Gurleen assistant.
 
 ## What is included
 

@@ -98,7 +98,8 @@ body::before {
 
 .hero,
 .assistant-layout,
-.contact-section {
+.contact-section,
+.value-strip {
   display: grid;
   gap: 24px;
 }
@@ -114,7 +115,10 @@ body::before {
 .assistant-panel,
 .notes-card,
 .contact-card,
-.signature-grid article {
+.journey-copy,
+.journey-panel,
+.journey-card,
+.intake-card {
   border: 1px solid var(--line);
   border-radius: 28px;
   background: var(--surface);
@@ -154,11 +158,11 @@ body::before {
 .section-heading p,
 .contact-copy p,
 .value-strip p,
-.mini-grid p,
-.signature-copy p,
-.signature-grid p,
 .assistant-header p,
 .notes-card li,
+.journey-card p,
+.notes-list li,
+.intake-card label,
 .contact-card label {
   color: var(--muted);
   line-height: 1.65;
@@ -171,8 +175,7 @@ body::before {
   margin-top: 28px;
 }
 
-.pathways,
-.specialty-grid {
+.pathways {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
@@ -182,8 +185,7 @@ body::before {
   margin-top: 22px;
 }
 
-.path-card,
-.specialty-card {
+.path-card {
   text-decoration: none;
   color: inherit;
   border: 1px solid var(--line);
@@ -193,15 +195,13 @@ body::before {
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }
 
-.path-card:hover,
-.specialty-card:hover {
+.path-card:hover {
   transform: translateY(-2px);
   border-color: rgba(138, 75, 58, 0.34);
   background: rgba(255, 249, 241, 0.9);
 }
 
-.path-card span,
-.specialty-label {
+.path-card span {
   display: block;
   margin-bottom: 8px;
   color: var(--gold);
@@ -211,20 +211,10 @@ body::before {
   text-transform: uppercase;
 }
 
-.path-card strong,
-.specialty-card h3 {
+.path-card strong {
   font-family: "Cormorant Garamond", serif;
   font-size: 1.55rem;
   line-height: 1.02;
-}
-
-.specialty-section {
-  margin: 0 0 56px;
-}
-
-.specialty-card p:last-child {
-  color: var(--muted);
-  line-height: 1.6;
 }
 
 .button {
@@ -260,28 +250,11 @@ body::before {
   border: 1px solid var(--line);
 }
 
-.trust-row,
 .value-strip,
 .notes-card ul {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-
-.trust-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 28px;
-}
-
-.trust-row li {
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(102, 116, 97, 0.11);
-  color: var(--sage);
-  font-size: 0.9rem;
-  font-weight: 700;
 }
 
 .hero-card {
@@ -311,13 +284,10 @@ body::before {
   font-family: "Cormorant Garamond", serif;
 }
 
-.mini-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+.simple-card p {
+  margin: 12px 0 0;
 }
 
-.mini-grid article,
 .value-strip article {
   padding: 18px;
   border: 1px solid rgba(77, 50, 32, 0.1);
@@ -325,14 +295,8 @@ body::before {
   background: rgba(255, 252, 248, 0.65);
 }
 
-.mini-grid span {
-  color: var(--accent-dark);
-  font-weight: 800;
-}
-
 .value-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 18px;
   margin: 24px 0 56px;
 }
@@ -340,50 +304,6 @@ body::before {
 .assistant-section,
 .contact-section {
   margin-top: 32px;
-}
-
-.signature-section {
-  display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
-  gap: 22px;
-  margin: 12px 0 56px;
-  align-items: start;
-}
-
-.signature-copy {
-  padding: 12px 10px 12px 0;
-}
-
-.signature-copy h2 {
-  margin: 0 0 14px;
-  font-family: "Cormorant Garamond", serif;
-  font-size: clamp(2.2rem, 4.6vw, 3.7rem);
-  line-height: 0.95;
-}
-
-.signature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.signature-grid article {
-  padding: 22px;
-}
-
-.signature-grid span {
-  display: inline-flex;
-  margin-bottom: 14px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: var(--gold);
-}
-
-.signature-grid h3 {
-  margin: 0 0 10px;
-  font-family: "Cormorant Garamond", serif;
-  font-size: 1.8rem;
 }
 
 .section-heading {
@@ -517,10 +437,6 @@ body::before {
 
 .notes-card {
   padding: 22px;
-}
-
-.accent-card {
-  background: linear-gradient(180deg, rgba(232, 220, 200, 0.9), rgba(250, 241, 232, 0.9));
 }
 
 .notes-card ul {
@@ -717,10 +633,7 @@ body::before {
   .assistant-layout,
   .contact-section,
   .value-strip,
-  .signature-section,
-  .signature-grid,
   .pathways,
-  .specialty-grid,
   .journey-hero,
   .journey-grid,
   .intake-card {
@@ -753,10 +666,6 @@ body::before {
 
   .nav {
     gap: 14px;
-  }
-
-  .mini-grid {
-    grid-template-columns: 1fr;
   }
 
   .message {

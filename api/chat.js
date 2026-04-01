@@ -7,7 +7,7 @@ const client = new OpenAI({
 const model = process.env.OPENAI_MODEL || "gpt-5";
 const businessConfig = {
   realtorName: process.env.REALTOR_NAME || "Gurleen Chahal",
-  brandName: process.env.BRAND_NAME || "HomesbyGurleen",
+  brandName: process.env.BRAND_NAME || "Homes By Gurleen",
   market: process.env.MARKET_NAME || "the local market",
   contactEmail: process.env.CONTACT_EMAIL || "the team email on file",
   webhookUrl: process.env.LEAD_WEBHOOK_URL || "",
