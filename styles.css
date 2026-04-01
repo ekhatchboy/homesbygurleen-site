@@ -27,9 +27,8 @@ body {
   font-family: "Manrope", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(255, 248, 237, 0.96), transparent 30%),
-    radial-gradient(circle at right 20%, rgba(226, 212, 193, 0.55), transparent 28%),
-    linear-gradient(180deg, #faf5ed 0%, var(--bg) 46%, #efe5d7 100%);
+    linear-gradient(180deg, rgba(250, 245, 237, 0.84), rgba(245, 239, 230, 0.88)),
+    url("https://cdn.shopify.com/s/files/1/0732/4434/4599/files/fairhaven-sectional-leather-terracotta-rust-color-scheme.webp?v=1768589890") center center / cover fixed no-repeat;
 }
 
 body::before {
@@ -37,11 +36,12 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(181, 138, 82, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(181, 138, 82, 0.035) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: radial-gradient(circle at center, black 42%, transparent 85%);
+  background:
+    linear-gradient(180deg, rgba(255, 249, 241, 0.54), rgba(239, 229, 215, 0.64)),
+    linear-gradient(rgba(181, 138, 82, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(181, 138, 82, 0.028) 1px, transparent 1px);
+  background-size: auto, 72px 72px, 72px 72px;
+  mask-image: radial-gradient(circle at center, black 52%, transparent 92%);
 }
 
 .page-shell {
