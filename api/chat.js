@@ -130,6 +130,7 @@ async function forwardLead(payload) {
       body: JSON.stringify({
         source: "website-ai-agent",
         sentAt: new Date().toISOString(),
+        webhookSecret: businessConfig.webhookSecret,
         ...payload
       })
     });

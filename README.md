@@ -1,6 +1,6 @@
 # Realtor AI Agent Starter
 
-This project is now a simple realtor website plus a live Google Gemini-ready backend for the Homes By Gurleen assistant.
+This project is now a simple realtor website plus a live Google Gemini-ready backend for the Homes By Gurleen assistant. It also includes a private CRM dashboard that can run on Cloudflare Pages while using Google Sheets as the database.
 
 ## What is included
 
@@ -9,6 +9,8 @@ This project is now a simple realtor website plus a live Google Gemini-ready bac
 - A chat assistant UI in `script.js`
 - A serverless Gemini backend in `api/chat.js`
 - A health check endpoint in `api/health.js`
+- A Cloudflare-ready CRM dashboard in `crm.html`, `crm.css`, and `crm.js`
+- Cloudflare Pages Functions in `functions/crm/`
 - Vercel-ready project files in `package.json` and `vercel.json`
 
 ## How to open the front end right now
@@ -33,7 +35,23 @@ The site now includes a backend endpoint:
 }
 ```
 
-There is also a `GET /api/health` endpoint that helps verify whether the server is up and whether `OPENAI_API_KEY` is present.
+There is also a `GET /api/health` endpoint that helps verify whether the server is up and whether `GEMINI_API_KEY` is present.
+
+## CRM dashboard
+
+The project now includes a lightweight CRM experience that reads from and updates your Google Sheet:
+
+- `crm.html` is the private dashboard page
+- `functions/crm/leads.js` loads records from Apps Script
+- `functions/crm/update.js` writes lead edits back to Apps Script
+- `google-apps-script/Code.gs` now supports:
+  - `setupSheets()`
+  - a `Master Leads` tab
+  - a `Follow-Up Guide` tab
+  - secure CRM lead reads
+  - secure CRM lead updates
+
+The CRM is designed to feel more like a mini HubSpot pipeline while still using Google Sheets as the source of truth.
 
 ## Local development
 
@@ -56,6 +74,8 @@ This project now expects a Node.js environment for the live Gemini backend.
 - `CONTACT_EMAIL`
 - `LEAD_WEBHOOK_URL` for optional Google Sheets or CRM forwarding
 - `LEAD_WEBHOOK_SECRET` for securing the lead webhook
+- `CRM_SHEETS_URL` for Cloudflare CRM read/write access to your Apps Script web app
+- `CRM_API_TOKEN` for securing CRM dashboard actions
 
 ## Recommended production setup
 
@@ -66,6 +86,24 @@ Because the domain is with GoDaddy, the simplest setup is:
 3. Add `GEMINI_API_KEY` and optional `GEMINI_MODEL` in Vercel project settings.
 4. Point the GoDaddy domain DNS to Vercel.
 5. Store the Gemini API key only on the backend, never in browser JavaScript.
+
+## Cloudflare Pages CRM setup
+
+If you want the CRM running on Cloudflare Pages instead of Vercel:
+
+1. Push this project to GitHub.
+2. Create a Cloudflare Pages project from that repo.
+3. Set the build command to blank.
+4. Set the output directory to `.`.
+5. Add Cloudflare environment variables:
+   - `CRM_SHEETS_URL`
+   - `CRM_API_TOKEN`
+6. In Google Apps Script, add a matching script property:
+   - `CRM_API_TOKEN`
+7. Run `setupSheets()` once in Apps Script to create `Master Leads` and `Follow-Up Guide`.
+8. Open `/crm.html` on the deployed Cloudflare Pages site.
+
+This keeps the CRM server-side bridge on Cloudflare while Google Sheets remains the database.
 
 ## Suggested assistant instructions
 
@@ -123,6 +161,14 @@ This repo includes a ready-to-use Apps Script in `google-apps-script/Code.gs`.
 7. Put the same secret into `LEAD_WEBHOOK_SECRET`.
 
 The helper notes are in `google-apps-script/README.md`.
+
+For the CRM layer, also add this script property in Apps Script:
+
+- `CRM_API_TOKEN`
+
+Use the same value in Cloudflare Pages for:
+
+- `CRM_API_TOKEN`
 
 ## Good next version ideas
 
