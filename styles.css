@@ -27,8 +27,8 @@ body {
   font-family: "Manrope", sans-serif;
   color: var(--ink);
   background:
-    linear-gradient(180deg, rgba(250, 245, 237, 0.84), rgba(245, 239, 230, 0.88)),
-    url("https://cdn.shopify.com/s/files/1/0732/4434/4599/files/fairhaven-sectional-leather-terracotta-rust-color-scheme.webp?v=1768589890") center center / cover fixed no-repeat;
+    linear-gradient(180deg, rgba(250, 245, 237, 0.4), rgba(245, 239, 230, 0.48)),
+    url("https://www.thespruce.com/thmb/EKQq_yymrdnVFbCxGatwIHbNxF8=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/MomokoMortonnaka-interiors.com-994a2b4b2def490f97386faf429fe824.jpg") center center / cover fixed no-repeat;
 }
 
 body::before {
@@ -37,11 +37,11 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255, 249, 241, 0.54), rgba(239, 229, 215, 0.64)),
-    linear-gradient(rgba(181, 138, 82, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(181, 138, 82, 0.028) 1px, transparent 1px);
+    linear-gradient(180deg, rgba(255, 249, 241, 0.18), rgba(239, 229, 215, 0.28)),
+    linear-gradient(rgba(181, 138, 82, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(181, 138, 82, 0.02) 1px, transparent 1px);
   background-size: auto, 72px 72px, 72px 72px;
-  mask-image: radial-gradient(circle at center, black 52%, transparent 92%);
+  mask-image: radial-gradient(circle at center, black 70%, transparent 100%);
 }
 
 .page-shell {
