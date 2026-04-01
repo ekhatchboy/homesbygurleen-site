@@ -107,8 +107,10 @@ body::before {
 }
 
 .brand-text-wrap .eyebrow {
-  font-size: 0.75rem;
-  color: var(--muted);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink);
 }
 
 .brand-text-wrap .brand {
