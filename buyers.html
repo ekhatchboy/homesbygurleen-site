@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy With HomesbyGurleen</title>
+  <meta
+    name="description"
+    content="A dedicated buyer page for HomesbyGurleen with a focused home search experience and buyer intake flow."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <p class="eyebrow">Buyer Experience</p>
+        <a href="index.html" class="brand">HomesbyGurleen</a>
+      </div>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="buyers.html">Buyers</a>
+        <a href="sellers.html">Sellers</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="journey-hero">
+        <div class="journey-copy">
+          <p class="hero-kicker">Buy with clarity</p>
+          <h1>A calmer, smarter path to finding the right home.</h1>
+          <p class="hero-text">
+            This page is built for buyers who want guidance, structure, and a more personal experience. It helps
+            organize the home search around timing, location, budget, and readiness to move.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#buyer-form">Start Buyer Intake</a>
+            <a class="button button-secondary" href="index.html#assistant">Chat With Concierge</a>
+          </div>
+        </div>
+        <aside class="journey-panel">
+          <h2>Buyer focus areas</h2>
+          <ul class="notes-list">
+            <li>Neighborhood preferences and commute goals</li>
+            <li>Budget range and financing readiness</li>
+            <li>Timeline for moving and showings</li>
+            <li>First-time buyer vs move-up buyer support</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section class="journey-grid">
+        <article class="journey-card">
+          <span>01</span>
+          <h3>Define the search</h3>
+          <p>Start with lifestyle, location, non-negotiables, and the kind of pace that feels right.</p>
+        </article>
+        <article class="journey-card">
+          <span>02</span>
+          <h3>Get financially clear</h3>
+          <p>Understand price range, pre-approval status, and where flexibility exists before touring homes.</p>
+        </article>
+        <article class="journey-card">
+          <span>03</span>
+          <h3>Move with intention</h3>
+          <p>Turn interest into showing requests and next-step planning with better context from the start.</p>
+        </article>
+      </section>
+
+      <section class="intake-section" id="buyer-form">
+        <div class="section-heading">
+          <p class="eyebrow">Buyer Intake</p>
+          <h2>Collect the details that make the search more focused.</h2>
+        </div>
+        <form class="intake-card">
+          <label>
+            Name
+            <input type="text" placeholder="Your name">
+          </label>
+          <label>
+            Email
+            <input type="email" placeholder="you@example.com">
+          </label>
+          <label>
+            Phone
+            <input type="tel" placeholder="(555) 555-5555">
+          </label>
+          <label>
+            Preferred areas
+            <input type="text" placeholder="Neighborhoods or cities">
+          </label>
+          <label>
+            Budget range
+            <input type="text" placeholder="$700k - $900k">
+          </label>
+          <label>
+            Timeline
+            <select>
+              <option>ASAP</option>
+              <option>0-3 months</option>
+              <option>3-6 months</option>
+              <option>6+ months</option>
+            </select>
+          </label>
+          <label>
+            Financing status
+            <select>
+              <option>Just exploring</option>
+              <option>Talking to a lender</option>
+              <option>Pre-approved</option>
+              <option>Cash buyer</option>
+            </select>
+          </label>
+          <label>
+            Must-haves
+            <input type="text" placeholder="Beds, baths, school zone, yard, style">
+          </label>
+          <button type="button" class="button button-primary">Use as buyer inquiry form</button>
+        </form>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
