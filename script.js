@@ -23,7 +23,7 @@ const transcript = [
   {
     role: "assistant",
     content:
-      "Hi, I'm the HBG Concierge. I can help with buying, selling, home valuation requests, and booking a call. Are you looking to buy, sell, or just exploring right now?"
+      "Hi, I'm the AI Concierge. I can help with buying, selling, home valuation requests, and booking a call. Are you looking to buy, sell, or just exploring right now?"
   }
 ];
 
