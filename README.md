@@ -1,13 +1,13 @@
 # Realtor AI Agent Starter
 
-This project is now a simple realtor website plus a live OpenAI-ready backend for the Homes By Gurleen assistant.
+This project is now a simple realtor website plus a live Google Gemini-ready backend for the Homes By Gurleen assistant.
 
 ## What is included
 
 - A polished landing page in `index.html`
 - A responsive design in `styles.css`
 - A chat assistant UI in `script.js`
-- A serverless OpenAI backend in `api/chat.js`
+- A serverless Gemini backend in `api/chat.js`
 - A health check endpoint in `api/health.js`
 - Vercel-ready project files in `package.json` and `vercel.json`
 
@@ -37,19 +37,19 @@ There is also a `GET /api/health` endpoint that helps verify whether the server 
 
 ## Local development
 
-This project now expects a Node.js environment for the live backend.
+This project now expects a Node.js environment for the live Gemini backend.
 
 1. Install Node.js 20 or newer.
 2. Run `npm install`
 3. Copy `.env.example` to `.env.local`
-4. Add your real OpenAI API key to `.env.local`
+4. Add your real Gemini API key to `.env.local`
 5. Run `npm run dev`
 6. Open the local Vercel URL and test the assistant
 
 ## Environment variables
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` with default `gpt-5`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL` with default `gemini-3-flash-preview`
 - `BRAND_NAME`
 - `REALTOR_NAME`
 - `MARKET_NAME`
@@ -63,13 +63,13 @@ Because the domain is with GoDaddy, the simplest setup is:
 
 1. Keep the domain in GoDaddy.
 2. Host the project on Vercel.
-3. Add `OPENAI_API_KEY` and optional `OPENAI_MODEL` in Vercel project settings.
+3. Add `GEMINI_API_KEY` and optional `GEMINI_MODEL` in Vercel project settings.
 4. Point the GoDaddy domain DNS to Vercel.
-5. Store the OpenAI API key only on the backend, never in browser JavaScript.
+5. Store the Gemini API key only on the backend, never in browser JavaScript.
 
 ## Suggested assistant instructions
 
-When you connect OpenAI later, the assistant should:
+When you connect Gemini, the assistant should:
 
 - Speak warmly and professionally.
 - Help buyers, sellers, and referrals.

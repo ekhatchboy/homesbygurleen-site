@@ -39,7 +39,7 @@ const demoReplies = [
       "Absolutely. What city is the home in?"
   },
   {
-    test: (text) => !leadProfile.intent && /\b(referral|referrals|referred|relocation)\b/i.test(text),
+    test: (text) => !leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text),
     reply:
       "Of course. What area or city is the referral looking in?"
   },
@@ -88,7 +88,7 @@ chatForm.addEventListener("submit", async (event) => {
   if (config.mode === "live") {
     appendMessage(
       "assistant",
-      "The live AI service is unavailable right now. Check the deployment and `OPENAI_API_KEY` configuration."
+      "The live AI service is unavailable right now. Check the deployment and `GEMINI_API_KEY` configuration."
     );
     return;
   }
@@ -194,7 +194,7 @@ function updateLeadProfile(text) {
     leadProfile.intent = "buyer";
   } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation)\b/i.test(text)) {
     leadProfile.intent = "seller";
-  } else if (!leadProfile.intent && /\b(referral|referrals|referred|relocation)\b/i.test(text)) {
+  } else if (!leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text)) {
     leadProfile.intent = "referral";
   }
 
@@ -208,7 +208,7 @@ function updateLeadProfile(text) {
     !leadProfile.area &&
     leadProfile.intent &&
     /^[A-Za-z][A-Za-z\s,'.-]{1,40}$/.test(normalizedText) &&
-    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|email|phone|call|text)\b/i.test(normalizedText)
+    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|relocate|relocating|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|email|phone|call|text)\b/i.test(normalizedText)
   ) {
     leadProfile.area = normalizedText;
   }
