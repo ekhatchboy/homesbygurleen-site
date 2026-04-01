@@ -17,6 +17,8 @@ const leadProfile = {
   contact: ""
 };
 
+let fallbackStep = 0;
+
 const transcript = [
   {
     role: "assistant",
@@ -29,27 +31,27 @@ const demoReplies = [
   {
     test: (text) => /\b(buy|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
     reply:
-      "Exciting. To help narrow things down, what area are you hoping to buy in, and what kind of timeline are you working with?"
+      "Great. What area are you hoping to buy in?"
   },
   {
     test: (text) => /\b(sell|seller|listing|home valuation|value my home)\b/i.test(text),
     reply:
-      "Absolutely. I can help with a sale strategy and a valuation request. What city is the home in, and how soon are you hoping to move?"
+      "Absolutely. What city is the home in?"
   },
   {
     test: (text) => /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
     reply:
-      "That helps. Are you already pre-approved or still exploring financing? If you're selling, are you also buying after the sale?"
+      "Good to know. Are you already pre-approved, or still exploring financing?"
   },
   {
     test: (text) => /\b(\$|budget|million|k\b|pre-approved|approved|cash)\b/i.test(text),
     reply:
-      "Perfect. I can pass that along to the realtor so she has context before reaching out. What's the best name, phone number, or email for follow-up?"
+      "That gives me a solid picture. What's the best phone number or email for follow-up?"
   },
   {
     test: (text) => /\b(@|email|phone|call me|text me)\b/i.test(text),
     reply:
-      "Thank you. You're officially in the queue for a personal follow-up. If you'd like, I can also help draft the next best step, like a buyer consult, a home valuation call, or a showing request."
+      "Perfect. The next best step would usually be a consult, a showing request, or a valuation call."
   }
 ];
 
@@ -112,6 +114,7 @@ function getDemoReply(text) {
   const matchedReply = demoReplies.find((item) => item.test(text));
 
   if (matchedReply) {
+    fallbackStep += 1;
     return matchedReply.reply;
   }
 
@@ -119,7 +122,16 @@ function getDemoReply(text) {
     return "I can help with buying, selling, relocation, or referrals. Which of those best fits what you need?";
   }
 
-  return "Thanks for sharing that. I'd keep the next question focused on your timeline, preferred area, and the best way for the realtor to follow up.";
+  const fallbackSequence = [
+    "What timeline are you working with?",
+    "Which area or neighborhood are you focused on?",
+    "Do you have a budget range in mind yet?",
+    "What's the best email or phone number for follow-up?"
+  ];
+
+  const nextReply = fallbackSequence[Math.min(fallbackStep, fallbackSequence.length - 1)];
+  fallbackStep += 1;
+  return nextReply;
 }
 
 function updateLeadProfile(text) {
