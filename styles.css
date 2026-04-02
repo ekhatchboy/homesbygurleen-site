@@ -399,6 +399,13 @@ body::before {
   margin-bottom: 8px;
 }
 
+.notes-kicker {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
 .stat-card strong {
   font-size: 1.8rem;
   font-family: "Cormorant Garamond", serif;
@@ -467,6 +474,29 @@ body::before {
 
 .assistant-panel {
   padding: 20px;
+}
+
+.assistant-notes {
+  display: grid;
+  gap: 18px;
+}
+
+.notes-card-highlight {
+  padding: 26px;
+  background: linear-gradient(180deg, rgba(255, 251, 246, 0.96), rgba(240, 231, 221, 0.88));
+}
+
+.notes-card-highlight h3 {
+  margin: 0 0 14px;
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  line-height: 1.08;
+}
+
+.notes-card-highlight p:last-child {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.75;
+  max-width: 28ch;
 }
 
 .quick-actions {

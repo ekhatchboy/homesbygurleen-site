@@ -208,8 +208,7 @@ function renderSelectedLead() {
       ${renderDetailItem("Email", lead["Email"] || "Not provided")}
       ${renderDetailItem("Area", lead["Area"] || "Not provided")}
       ${renderDetailItem("Timeline", lead["Timeline"] || "Not provided")}
-      ${renderDetailItem("Budget", lead["Budget"] || "Not provided")}
-      ${renderDetailItem("Business Email", lead["Business Email"] || "Not provided")}
+      ${renderDetailItem("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "Not provided")}
     </div>
 
     <section class="crm-timeline-panel">
@@ -242,7 +241,7 @@ function renderSelectedLead() {
       ${renderInput("Email", lead["Email"])}
       ${renderInput("Area", lead["Area"])}
       ${renderInput("Timeline", lead["Timeline"])}
-      ${renderInput("Budget", lead["Budget"])}
+      ${renderInput("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "")}
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
       ${renderSelect("Lead Status", ["New", "Active", "Warm", "Closed"], lead["Lead Status"] || "New")}
       ${renderInput("Last Contact Date", lead["Last Contact Date"], "date")}
@@ -648,14 +647,30 @@ function truncateSentence(value, maxLength) {
 }
 
 function formatBudgetSummary(value) {
-  const text = String(value || "").trim();
-  const digits = text.replace(/[^\d.]/g, "");
+  const formatted = formatBudgetValue(value);
+  if (formatted && formatted !== String(value || "").trim()) {
+    return formatted;
+  }
 
-  if (!digits) {
+  const text = String(value || "").trim();
+  if (text) {
     return text;
   }
 
-  const amount = Number(digits);
+  return "";
+}
+
+function formatBudgetValue(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  if (!/^\$?\s*\d[\d,]*(\.\d+)?$/.test(text)) {
+    return text;
+  }
+
+  const amount = Number(text.replace(/[$,\s]/g, ""));
   if (!Number.isFinite(amount) || amount <= 0) {
     return text;
   }
