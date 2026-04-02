@@ -1,6 +1,15 @@
 .crm-shell {
   display: grid;
-  gap: 26px;
+  gap: 30px;
+}
+
+body.site-background {
+  background:
+    linear-gradient(180deg, rgba(248, 242, 234, 0.9), rgba(241, 233, 223, 0.9)),
+    linear-gradient(135deg, rgba(255, 252, 247, 0.58), rgba(223, 204, 185, 0.42)),
+    radial-gradient(circle at top right, rgba(181, 138, 82, 0.18), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(138, 75, 58, 0.16), transparent 24%),
+    url("living-room-background.png") center center / cover fixed no-repeat;
 }
 
 .crm-hero,
@@ -63,12 +72,13 @@
 }
 
 .crm-summary {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
 }
 
 .crm-metric {
-  padding: 18px 20px;
-  background: rgba(255, 252, 248, 0.72);
+  padding: 20px 22px;
+  background: linear-gradient(180deg, rgba(255, 251, 246, 0.96), rgba(241, 230, 218, 0.88));
 }
 
 .crm-metric span {
@@ -83,8 +93,9 @@
 }
 
 .crm-workspace {
-  grid-template-columns: 0.85fr 1.15fr;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.4fr);
   align-items: start;
+  gap: 24px;
 }
 
 .crm-sidebar,
@@ -110,6 +121,38 @@
 .crm-filter-card {
   display: grid;
   gap: 14px;
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.97), rgba(239, 228, 216, 0.9));
+}
+
+.crm-quick-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.crm-chip {
+  border: 1px solid rgba(138, 75, 58, 0.16);
+  background: rgba(255, 250, 244, 0.95);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, color 180ms ease;
+}
+
+.crm-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(138, 75, 58, 0.3);
+}
+
+.crm-chip.is-active {
+  background: var(--accent);
+  color: #fffaf7;
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(93, 45, 37, 0.18);
 }
 
 .crm-field {
@@ -149,8 +192,9 @@
 .crm-lead-row {
   padding: 18px 20px;
   cursor: pointer;
-  background: rgba(255, 252, 248, 0.78);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.86), rgba(247, 240, 232, 0.94));
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  text-align: left;
 }
 
 .crm-lead-row:hover,
@@ -224,7 +268,9 @@
 }
 
 .crm-detail-card {
-  min-height: 720px;
+  min-height: 780px;
+  padding: 30px;
+  background: linear-gradient(180deg, rgba(255, 251, 247, 0.98), rgba(241, 232, 222, 0.94));
 }
 
 .crm-detail-grid,
@@ -279,7 +325,7 @@
   border: 1px dashed rgba(77, 50, 32, 0.16);
   border-radius: 22px;
   text-align: center;
-  background: rgba(255, 252, 248, 0.58);
+  background: rgba(255, 252, 248, 0.7);
 }
 
 .crm-detail-empty {

@@ -2,11 +2,13 @@
   --bg: #f5efe6;
   --surface: rgba(255, 250, 243, 0.88);
   --surface-strong: rgba(255, 251, 245, 0.94);
+  --surface-soft: rgba(252, 246, 238, 0.82);
   --ink: #241b18;
   --muted: #6b5d58;
   --line: rgba(64, 38, 26, 0.14);
   --accent: #8a4b3a;
   --accent-dark: #5d2d25;
+  --accent-soft: rgba(138, 75, 58, 0.12);
   --shadow: 0 24px 70px rgba(71, 42, 27, 0.12);
 }
 
@@ -20,15 +22,17 @@ body {
   font-family: "Manrope", sans-serif;
   color: var(--ink);
   background:
-    linear-gradient(180deg, rgba(248, 242, 234, 0.88), rgba(241, 233, 223, 0.92)),
-    radial-gradient(circle at top right, rgba(181, 138, 82, 0.16), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(138, 75, 58, 0.14), transparent 24%);
+    linear-gradient(180deg, rgba(248, 242, 234, 0.9), rgba(241, 233, 223, 0.9)),
+    linear-gradient(135deg, rgba(255, 252, 247, 0.58), rgba(223, 204, 185, 0.42)),
+    radial-gradient(circle at top right, rgba(181, 138, 82, 0.18), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(138, 75, 58, 0.16), transparent 24%),
+    url("living-room-background.png") center center / cover fixed no-repeat;
 }
 
 .page-shell {
-  width: min(1240px, calc(100% - 32px));
+  width: min(1480px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 24px 0 48px;
+  padding: 28px 0 64px;
 }
 
 .topbar,
@@ -105,7 +109,7 @@ body {
 
 .crm-shell {
   display: grid;
-  gap: 24px;
+  gap: 28px;
 }
 
 .crm-hero {
@@ -138,11 +142,13 @@ body {
 }
 
 .crm-summary {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
 }
 
 .crm-metric {
-  padding: 18px 20px;
+  padding: 20px 22px;
+  background: linear-gradient(180deg, rgba(255, 251, 246, 0.96), rgba(241, 230, 218, 0.88));
 }
 
 .crm-metric span {
@@ -157,8 +163,9 @@ body {
 }
 
 .crm-workspace {
-  grid-template-columns: 0.85fr 1.15fr;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.4fr);
   align-items: start;
+  gap: 24px;
 }
 
 .crm-sidebar,
@@ -167,6 +174,10 @@ body {
 .crm-lead-list {
   display: grid;
   gap: 16px;
+}
+
+.crm-filter-card {
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.97), rgba(239, 228, 216, 0.9));
 }
 
 .crm-card-heading,
@@ -193,6 +204,37 @@ body {
   color: var(--muted);
 }
 
+.crm-quick-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.crm-chip {
+  border: 1px solid rgba(138, 75, 58, 0.16);
+  background: rgba(255, 250, 244, 0.95);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, color 180ms ease;
+}
+
+.crm-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(138, 75, 58, 0.3);
+}
+
+.crm-chip.is-active {
+  background: var(--accent);
+  color: #fffaf7;
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(93, 45, 37, 0.18);
+}
+
 .crm-field input,
 .crm-field select,
 .crm-form-grid input,
@@ -207,11 +249,22 @@ body {
   color: var(--ink);
 }
 
+.crm-field input:focus,
+.crm-field select:focus,
+.crm-form-grid input:focus,
+.crm-form-grid select:focus,
+.crm-form-grid textarea:focus {
+  outline: none;
+  border-color: rgba(138, 75, 58, 0.42);
+  box-shadow: 0 0 0 4px rgba(138, 75, 58, 0.08);
+}
+
 .crm-lead-row {
   padding: 18px 20px;
   cursor: pointer;
-  background: rgba(255, 252, 248, 0.78);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.86), rgba(247, 240, 232, 0.94));
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  text-align: left;
 }
 
 .crm-lead-row:hover,
@@ -268,7 +321,9 @@ body {
 }
 
 .crm-detail-card {
-  min-height: 720px;
+  min-height: 780px;
+  padding: 30px;
+  background: linear-gradient(180deg, rgba(255, 251, 247, 0.98), rgba(241, 232, 222, 0.94));
 }
 
 .crm-detail-grid,
@@ -302,7 +357,7 @@ body {
   border: 1px dashed rgba(77, 50, 32, 0.16);
   border-radius: 22px;
   text-align: center;
-  background: rgba(255, 252, 248, 0.58);
+  background: rgba(255, 252, 248, 0.7);
 }
 
 .crm-detail-empty {

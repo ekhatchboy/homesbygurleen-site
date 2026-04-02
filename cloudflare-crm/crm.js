@@ -2,7 +2,8 @@ const state = {
   leads: [],
   filteredLeads: [],
   selectedLeadId: "",
-  isSaving: false
+  isSaving: false,
+  quickView: "all"
 };
 
 const elements = {
@@ -11,6 +12,7 @@ const elements = {
   searchInput: document.querySelector("#searchInput"),
   leadTypeFilter: document.querySelector("#leadTypeFilter"),
   leadStatusFilter: document.querySelector("#leadStatusFilter"),
+  quickViews: document.querySelector("#quickViews"),
   refreshButton: document.querySelector("#refreshLeadsButton"),
   statusText: document.querySelector("#crmStatusText"),
   metricTotal: document.querySelector("#metricTotal"),
@@ -25,6 +27,13 @@ function initialize() {
   elements.searchInput?.addEventListener("input", applyFilters);
   elements.leadTypeFilter?.addEventListener("change", applyFilters);
   elements.leadStatusFilter?.addEventListener("change", applyFilters);
+  elements.quickViews?.querySelectorAll("[data-quick-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.quickView = button.getAttribute("data-quick-view") || "all";
+      syncQuickViewButtons();
+      applyFilters();
+    });
+  });
   elements.refreshButton?.addEventListener("click", loadLeads);
   loadLeads();
 }
@@ -81,6 +90,10 @@ function applyFilters() {
       return false;
     }
 
+    if (!matchesQuickView(lead)) {
+      return false;
+    }
+
     return true;
   });
 
@@ -91,6 +104,28 @@ function applyFilters() {
   renderLeadList();
   renderSelectedLead();
   updateMetrics(state.filteredLeads);
+}
+
+function matchesQuickView(lead) {
+  switch (state.quickView) {
+    case "today":
+      return getDueState(lead["Next Follow-Up Date"]).className === "is-today";
+    case "overdue":
+      return getDueState(lead["Next Follow-Up Date"]).className === "is-overdue";
+    case "new":
+      return lead["Lead Status"] === "New";
+    case "buySell":
+      return lead["Lead Type"] === "Buyer + Seller";
+    default:
+      return true;
+  }
+}
+
+function syncQuickViewButtons() {
+  elements.quickViews?.querySelectorAll("[data-quick-view]").forEach((button) => {
+    const isActive = (button.getAttribute("data-quick-view") || "all") === state.quickView;
+    button.classList.toggle("is-active", isActive);
+  });
 }
 
 function renderLeadList() {
