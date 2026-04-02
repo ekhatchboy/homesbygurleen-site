@@ -545,6 +545,11 @@ function jsonResponse_(data, statusCode) {
 function applyDropdowns_(sheet) {
   const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
 
+  const leadTypeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
+    .setAllowInvalid(false)
+    .build();
+
   const consentRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["Yes", "No"], true)
     .setAllowInvalid(false)
@@ -565,6 +570,7 @@ function applyDropdowns_(sheet) {
     .setAllowInvalid(false)
     .build();
 
+  sheet.getRange(2, 3, maxRows, 1).setDataValidation(leadTypeRule);
   sheet.getRange(2, 18, maxRows, 1).setDataValidation(consentRule);
   sheet.getRange(2, 19, maxRows, 1).setDataValidation(statusRule);
   sheet.getRange(2, 22, maxRows, 1).setDataValidation(rankRule);
