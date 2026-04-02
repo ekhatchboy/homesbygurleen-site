@@ -558,18 +558,32 @@ function splitLeadTypes_(value) {
 
 function mergeAreaSummary_(existingArea, leadData) {
   const parsedExisting = parseAreaSummary_(existingArea);
+  const parsedIncoming = parseAreaSummary_(leadData["Area"]);
   const incomingBuying = String(leadData._buyingArea || "").trim();
   const incomingSelling = String(leadData._sellingLocation || "").trim();
-  const incomingArea = String(leadData["Area"] || "").trim();
 
-  const nextBuying = incomingBuying || parsedExisting.buying;
-  const nextSelling = incomingSelling || parsedExisting.selling;
+  const nextBuying = mergeTextValues_(
+    parsedExisting.buying,
+    incomingBuying || parsedIncoming.buying,
+    " | "
+  );
+  const nextSelling = mergeTextValues_(
+    parsedExisting.selling,
+    incomingSelling || parsedIncoming.selling,
+    " | "
+  );
+  const nextGeneral = mergeTextValues_(
+    parsedExisting.general,
+    parsedIncoming.general,
+    " | "
+  );
 
   if (nextBuying || nextSelling) {
-    return buildIncomingArea_(nextBuying, nextSelling);
+    const structured = buildIncomingArea_(nextBuying, nextSelling);
+    return nextGeneral ? mergeTextValues_(structured, nextGeneral, " | ") : structured;
   }
 
-  return mergeTextValues_(parsedExisting.general, incomingArea, " | ");
+  return nextGeneral;
 }
 
 function parseAreaSummary_(value) {
@@ -638,7 +652,13 @@ function findBuyerArea_(namedValues, sourceSheetName) {
 
 function findSellingLocation_(namedValues, sourceSheetName) {
   const normalized = String(sourceSheetName || "").toLowerCase();
-  const address = findFieldValue_(namedValues, ["property address", "address"]);
+  const address = findFieldValue_(namedValues, [
+    "property address",
+    "home address",
+    "address of property",
+    "address of home",
+    "property location"
+  ]);
 
   if (address) {
     return address;
@@ -668,6 +688,21 @@ function buildIncomingArea_(buyingArea, sellingLocation) {
   }
 
   return "";
+}
+
+function mergeTextValues_(existingValue, incomingValue, separator) {
+  const current = String(existingValue || "").trim();
+  const next = String(incomingValue || "").trim();
+
+  if (!current) {
+    return next;
+  }
+
+  if (!next || current.toLowerCase().includes(next.toLowerCase())) {
+    return current;
+  }
+
+  return `${current}${separator}${next}`;
 }
 
 function findFieldValue_(namedValues, keywords) {
