@@ -78,6 +78,8 @@ function applyFilters() {
       lead["Phone"],
       lead["Email"],
       lead["Area"],
+      lead["Buying Area"],
+      lead["Selling Location"],
       lead["Lead Type"],
       lead["Latest Message / Notes"]
     ].join(" ").toLowerCase();
@@ -141,7 +143,7 @@ function renderLeadList() {
 
   elements.leadList.innerHTML = state.filteredLeads.map((lead) => {
     const isActive = lead["Lead ID"] === state.selectedLeadId;
-    const name = lead["Name"] || lead["Email"] || lead["Phone"] || "Unnamed lead";
+    const name = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "Unnamed lead";
     const dueState = getDueState(lead["Next Follow-Up Date"]);
 
     return `
@@ -207,9 +209,11 @@ function renderSelectedLead() {
     </div>
 
     <div class="crm-detail-grid">
-      ${renderDetailItem("Phone", lead["Phone"] || "Not provided")}
+      ${renderDetailItem("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "Not provided")}
       ${renderDetailItem("Email", lead["Email"] || "Not provided")}
-      ${renderDetailItem("Area", lead["Area"] || "Not provided")}
+      ${renderDetailItem("Location Summary", lead["Area"] || "Not provided")}
+      ${renderDetailItem("Buying Area", lead["Buying Area"] || "Not provided")}
+      ${renderDetailItem("Selling Location", lead["Selling Location"] || "Not provided")}
       ${renderDetailItem("Timeline", lead["Timeline"] || "Not provided")}
       ${renderDetailItem("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "Not provided")}
     </div>
@@ -240,9 +244,11 @@ function renderSelectedLead() {
     <form id="leadEditForm" class="crm-form-grid">
       ${renderInput("Name", lead["Name"])}
       ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
-      ${renderInput("Phone", lead["Phone"])}
+      ${renderInput("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "")}
       ${renderInput("Email", lead["Email"])}
       ${renderInput("Area", lead["Area"])}
+      ${renderInput("Buying Area", lead["Buying Area"])}
+      ${renderInput("Selling Location", lead["Selling Location"])}
       ${renderInput("Timeline", lead["Timeline"])}
       ${renderInput("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "")}
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
@@ -294,7 +300,7 @@ function renderPipelineBoard() {
     const leadMarkup = leads.slice(0, 6).map((lead) => {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
       const dueState = getDueState(lead["Next Follow-Up Date"]);
-      const displayName = lead["Name"] || lead["Email"] || lead["Phone"] || "Unnamed lead";
+      const displayName = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "Unnamed lead";
 
       return `
         <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
@@ -353,7 +359,7 @@ async function saveLead(leadId, formData) {
   };
 
   for (const [key, value] of formData.entries()) {
-    payload[key] = value;
+    payload[key] = key === "Phone" ? formatPhoneValue(value) : value;
   }
 
   try {
@@ -546,6 +552,8 @@ function buildSmartSummary(lead) {
   const parts = [];
   const leadType = cleanValue(lead["Lead Type"]);
   const area = cleanValue(lead["Area"]);
+  const buyingArea = cleanValue(lead["Buying Area"]);
+  const sellingLocation = cleanValue(lead["Selling Location"]);
   const timeline = cleanValue(lead["Timeline"]);
   const budget = cleanValue(lead["Budget"]);
   const goal = cleanValue(lead["Goal / Context"]);
@@ -561,7 +569,15 @@ function buildSmartSummary(lead) {
     parts.push("Lead");
   }
 
-  if (area) {
+  if (buyingArea) {
+    parts.push(`buying area: ${buyingArea}`);
+  }
+
+  if (sellingLocation) {
+    parts.push(`selling location: ${sellingLocation}`);
+  }
+
+  if (!buyingArea && !sellingLocation && area) {
     parts.push(`focused on ${area}`);
   }
 
@@ -674,6 +690,21 @@ function formatBudgetValue(value) {
   });
 }
 
+function formatPhoneValue(value) {
+  const text = String(value || "").trim();
+  const digits = text.replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `1-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+
+  return text;
+}
+
 function withArticle_(value) {
   const text = String(value || "").trim();
   if (!text) {
@@ -735,6 +766,10 @@ async function saveLeadPatch(payload) {
   state.isSaving = true;
   renderSelectedLead();
   elements.statusText.textContent = "Saving quick action.";
+
+  if (Object.prototype.hasOwnProperty.call(payload, "Phone")) {
+    payload["Phone"] = formatPhoneValue(payload["Phone"]);
+  }
 
   try {
     const response = await fetch("/crm/update", {

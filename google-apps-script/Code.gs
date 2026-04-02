@@ -24,7 +24,9 @@ const MASTER_HEADER_ROW = [
   "Next Follow-Up Date",
   "Follow-Up Rank",
   "Text Status",
-  "Assigned Message"
+  "Assigned Message",
+  "Buying Area",
+  "Selling Location"
 ];
 
 function setupSheets() {
@@ -95,7 +97,7 @@ function doPost(e) {
       leadType,
       "AI Chat",
       "",
-      contactDetails.phone,
+      formatPhoneValue_(contactDetails.phone),
       contactDetails.email,
       payload.leadProfile?.area || "",
       payload.leadProfile?.timeline || "",
@@ -113,7 +115,9 @@ function doPost(e) {
       formatDate_(addDays_(new Date(), 2)),
       "Rank A",
       "Pending Review",
-      buildAssignedMessage_(leadType)
+      buildAssignedMessage_(leadType),
+      payload.leadProfile?.area || "",
+      ""
     ]);
 
     formatMasterLeadSheet_(sheet);
@@ -134,6 +138,8 @@ function onFormSubmit(e) {
   const namedValues = (e && e.namedValues) || {};
   const contactDetails = extractContactDetailsFromNamedValues_(namedValues);
   const leadType = inferLeadTypeFromSheetName_(sourceSheetName);
+  const buyingArea = findBuyerArea_(namedValues, sourceSheetName);
+  const sellingLocation = findSellingLocation_(namedValues, sourceSheetName);
 
   sheet.appendRow([
     createLeadId_(),
@@ -143,7 +149,7 @@ function onFormSubmit(e) {
     findFieldValue_(namedValues, ["name", "full name", "client name", "referral name"]),
     contactDetails.phone,
     contactDetails.email,
-    findFieldValue_(namedValues, ["area", "city", "location", "preferred areas", "target area", "property address"]),
+    buildAreaSummary_(buyingArea, sellingLocation),
     findFieldValue_(namedValues, ["timeline", "timing", "desired timeline", "purchase timing"]),
     findFieldValue_(namedValues, ["budget", "budget range", "price range"]),
     findFieldValue_(namedValues, ["goal", "main goal", "investment goal", "property type", "referral type", "financing status", "financing"]),
@@ -159,7 +165,9 @@ function onFormSubmit(e) {
     formatDate_(addDays_(new Date(), 2)),
     "Rank A",
     "Pending Review",
-    buildAssignedMessage_(leadType)
+    buildAssignedMessage_(leadType),
+    buyingArea,
+    sellingLocation
   ]);
 
   formatMasterLeadSheet_(sheet);
@@ -177,8 +185,20 @@ function getMasterLeadSheet_() {
     sheet.appendRow(MASTER_HEADER_ROW);
   }
 
+  ensureMasterHeaders_(sheet);
+
   formatMasterLeadSheet_(sheet);
   return sheet;
+}
+
+function ensureMasterHeaders_(sheet) {
+  const maxColumns = sheet.getMaxColumns();
+
+  if (maxColumns < MASTER_HEADER_ROW.length) {
+    sheet.insertColumnsAfter(maxColumns, MASTER_HEADER_ROW.length - maxColumns);
+  }
+
+  sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).setValues([MASTER_HEADER_ROW]);
 }
 
 function formatMasterLeadSheet_(sheet) {
@@ -291,6 +311,110 @@ function ensureGuideSheet_() {
   });
 }
 
+function backfillBuyerResponses() {
+  backfillFormResponsesBySheetName_("Buyer form");
+}
+
+function backfillSellerResponses() {
+  backfillFormResponsesBySheetName_("Seller form");
+}
+
+function backfillInvestorResponses() {
+  backfillFormResponsesBySheetName_("Investor form");
+}
+
+function backfillReferralResponses() {
+  backfillFormResponsesBySheetName_("Referral form");
+}
+
+function backfillAllLinkedForms() {
+  [
+    "Buyer form",
+    "Seller form",
+    "Investor form",
+    "Referral form"
+  ].forEach((sheetName) => backfillFormResponsesBySheetName_(sheetName));
+}
+
+function backfillFormResponsesBySheetName_(sheetName) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = spreadsheet.getSheetByName(sheetName);
+
+  if (!sourceSheet) {
+    throw new Error(`Sheet not found: ${sheetName}`);
+  }
+
+  setupSheets();
+
+  const data = sourceSheet.getDataRange().getValues();
+  if (data.length < 2) {
+    return;
+  }
+
+  const headers = data[0];
+  const rows = data.slice(1);
+  const masterSheet = getMasterLeadSheet_();
+  const existingRows = getLeadRecords_();
+  const existingKeys = new Set(
+    existingRows.map((row) => createBackfillMatchKey_(row["Source"], row["Date"], row["Email"], row["Phone"]))
+  );
+
+  rows.forEach((row) => {
+    if (!row.some((value) => String(value || "").trim())) {
+      return;
+    }
+
+    const namedValues = {};
+    headers.forEach((header, index) => {
+      namedValues[header] = [row[index]];
+    });
+
+    const contactDetails = extractContactDetailsFromNamedValues_(namedValues);
+    const leadType = inferLeadTypeFromSheetName_(sheetName);
+    const buyingArea = findBuyerArea_(namedValues, sheetName);
+    const sellingLocation = findSellingLocation_(namedValues, sheetName);
+    const timestamp = row[0] || extractTimestamp_(null, namedValues);
+    const dedupeKey = createBackfillMatchKey_(sheetName, timestamp, contactDetails.email, contactDetails.phone);
+
+    if (existingKeys.has(dedupeKey)) {
+      return;
+    }
+
+    masterSheet.appendRow([
+      createLeadId_(),
+      timestamp,
+      leadType,
+      sheetName,
+      findFieldValue_(namedValues, ["name", "full name", "client name", "referral name"]),
+      contactDetails.phone,
+      contactDetails.email,
+      buildAreaSummary_(buyingArea, sellingLocation),
+      findFieldValue_(namedValues, ["timeline", "timing", "desired timeline", "purchase timing"]),
+      findFieldValue_(namedValues, ["budget", "budget range", "price range"]),
+      findFieldValue_(namedValues, ["goal", "main goal", "investment goal", "property type", "referral type", "financing status", "financing"]),
+      findFieldValue_(namedValues, ["notes", "must-haves", "anything gurleen should know", "anything else", "message"]),
+      "Gurleen Chahal",
+      "Homes By Gurleen",
+      "",
+      "gurleen@homesbygurleen.com",
+      formatNamedValues_(namedValues),
+      "",
+      "New",
+      "",
+      formatDate_(addDays_(new Date(), 2)),
+      "Rank A",
+      "Pending Review",
+      buildAssignedMessage_(leadType),
+      buyingArea,
+      sellingLocation
+    ]);
+
+    existingKeys.add(dedupeKey);
+  });
+
+  formatMasterLeadSheet_(masterSheet);
+}
+
 function extractContactDetails_(contactValue) {
   const value = String(contactValue || "").trim();
   const emailMatch = value.match(/\S+@\S+\.\S+/);
@@ -308,9 +432,58 @@ function extractContactDetailsFromNamedValues_(namedValues) {
     .join(" ");
 
   return {
-    phone: findFieldValue_(namedValues, ["phone", "phone number", "best phone"]) || extractContactDetails_(combinedValues).phone,
+    phone: formatPhoneValue_(findFieldValue_(namedValues, ["phone", "phone number", "best phone"]) || extractContactDetails_(combinedValues).phone),
     email: findFieldValue_(namedValues, ["email", "best contact email"]) || extractContactDetails_(combinedValues).email
   };
+}
+
+function findBuyerArea_(namedValues, sourceSheetName) {
+  const normalized = String(sourceSheetName || "").toLowerCase();
+  const value = findFieldValue_(namedValues, ["preferred areas", "target area", "cities", "areas are you interested in", "what cities/areas are you interested in"]);
+
+  if (value) {
+    return value;
+  }
+
+  if (normalized.includes("buyer")) {
+    return findFieldValue_(namedValues, ["area", "city", "location"]);
+  }
+
+  return "";
+}
+
+function findSellingLocation_(namedValues, sourceSheetName) {
+  const normalized = String(sourceSheetName || "").toLowerCase();
+  const address = findFieldValue_(namedValues, ["property address", "address"]);
+
+  if (address) {
+    return address;
+  }
+
+  if (normalized.includes("seller")) {
+    return findFieldValue_(namedValues, ["location", "city", "area"]);
+  }
+
+  return "";
+}
+
+function buildAreaSummary_(buyingArea, sellingLocation) {
+  const buyer = String(buyingArea || "").trim();
+  const seller = String(sellingLocation || "").trim();
+
+  if (buyer && seller) {
+    return `Buying: ${buyer} | Selling: ${seller}`;
+  }
+
+  if (buyer) {
+    return `Buying: ${buyer}`;
+  }
+
+  if (seller) {
+    return `Selling: ${seller}`;
+  }
+
+  return "";
 }
 
 function findFieldValue_(namedValues, keywords) {
@@ -343,6 +516,29 @@ function extractTimestamp_(e, namedValues) {
 
 function createLeadId_() {
   return `HBG-${Utilities.getUuid().slice(0, 8).toUpperCase()}`;
+}
+
+function formatPhoneValue_(value) {
+  const text = String(value || "").trim();
+  const digits = text.replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `1-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+
+  return text;
+}
+
+function createBackfillMatchKey_(source, date, email, phone) {
+  const sourcePart = String(source || "").trim().toLowerCase();
+  const datePart = String(date || "").trim();
+  const emailPart = String(email || "").trim().toLowerCase();
+  const phonePart = String(phone || "").replace(/\D/g, "");
+  return [sourcePart, datePart, emailPart, phonePart].join("|");
 }
 
 function inferLeadTypeFromSheetName_(sheetName) {
@@ -509,6 +705,8 @@ function handleLeadUpdate_(payload) {
     "Phone",
     "Email",
     "Area",
+    "Buying Area",
+    "Selling Location",
     "Timeline",
     "Budget",
     "Goal / Context",
@@ -526,10 +724,21 @@ function handleLeadUpdate_(payload) {
     if (Object.prototype.hasOwnProperty.call(payload, field)) {
       const column = headers.indexOf(field) + 1;
       if (column) {
-        sheet.getRange(rowNumber, column).setValue(payload[field] || "");
+        const nextValue = field === "Phone" ? formatPhoneValue_(payload[field] || "") : (payload[field] || "");
+        sheet.getRange(rowNumber, column).setValue(nextValue);
       }
     }
   });
+
+  const areaColumn = headers.indexOf("Area") + 1;
+  const buyingAreaColumn = headers.indexOf("Buying Area") + 1;
+  const sellingLocationColumn = headers.indexOf("Selling Location") + 1;
+
+  if (areaColumn && buyingAreaColumn && sellingLocationColumn) {
+    const buyingArea = String(sheet.getRange(rowNumber, buyingAreaColumn).getValue() || "").trim();
+    const sellingLocation = String(sheet.getRange(rowNumber, sellingLocationColumn).getValue() || "").trim();
+    sheet.getRange(rowNumber, areaColumn).setValue(buildAreaSummary_(buyingArea, sellingLocation));
+  }
 
   formatMasterLeadSheet_(sheet);
   const record = getLeadRecords_().find((entry) => entry["Lead ID"] === leadId);

@@ -3,8 +3,8 @@
   --surface: rgba(255, 250, 243, 0.88);
   --surface-strong: rgba(255, 251, 245, 0.94);
   --surface-soft: rgba(252, 246, 238, 0.82);
-  --ink: #241b18;
-  --muted: #6b5d58;
+  --ink: #1c1512;
+  --muted: #524742;
   --line: rgba(64, 38, 26, 0.14);
   --accent: #8a4b3a;
   --accent-dark: #5d2d25;
@@ -101,7 +101,7 @@ body::after {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-size: 0.74rem;
-  color: var(--muted);
+  color: #665852;
   font-weight: 800;
 }
 
@@ -179,7 +179,7 @@ body::after {
 .crm-lead-subtitle,
 .crm-detail-note,
 .crm-empty-state {
-  color: var(--muted);
+  color: #5b4f49;
   line-height: 1.6;
 }
 
@@ -530,6 +530,7 @@ body::after {
   padding: 8px 11px;
   border-radius: 999px;
   background: rgba(36, 27, 24, 0.06);
+  color: #5f514b;
 }
 
 .crm-pill.is-new {
@@ -598,7 +599,7 @@ body::after {
 
 .crm-smart-summary {
   margin: 0;
-  color: var(--ink);
+  color: #302623;
   font-size: 1.04rem;
   line-height: 1.75;
   max-width: 70ch;

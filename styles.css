@@ -136,7 +136,7 @@ body::before {
   display: inline-block;
   font-size: 0.95rem;
   color: var(--muted);
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   transition: color 180ms ease;
 }
 
@@ -144,19 +144,18 @@ body::before {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -1px;
-  width: 114%;
-  height: 12px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 16' preserveAspectRatio='none'%3E%3Cpath d='M4 10.4C21 13.1 38 13 57 8.5C77 3.8 96 3.2 116 6.4' fill='none' stroke='%23b58a52' stroke-width='1.9' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  background-position: center;
+  bottom: 0;
+  width: calc(100% - 4px);
+  max-width: 68px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(181, 138, 82, 0.2), rgba(181, 138, 82, 0.95), rgba(181, 138, 82, 0.2));
   transform: scaleX(0);
   transform-origin: center;
   opacity: 0;
   translate: -50% 0;
-  filter: drop-shadow(0 1px 0 rgba(255, 248, 236, 0.65));
-  transition: transform 240ms ease, opacity 240ms ease;
+  box-shadow: 0 1px 0 rgba(255, 248, 236, 0.7);
+  transition: transform 220ms ease, opacity 220ms ease;
 }
 
 .nav a:hover,
