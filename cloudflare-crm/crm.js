@@ -9,6 +9,7 @@ const state = {
 const elements = {
   leadList: document.querySelector("#leadList"),
   detailCard: document.querySelector("#detailCard"),
+  pipelineBoard: document.querySelector("#pipelineBoard"),
   searchInput: document.querySelector("#searchInput"),
   leadTypeFilter: document.querySelector("#leadTypeFilter"),
   leadStatusFilter: document.querySelector("#leadStatusFilter"),
@@ -102,6 +103,7 @@ function applyFilters() {
   }
 
   renderLeadList();
+  renderPipelineBoard();
   renderSelectedLead();
   updateMetrics(state.filteredLeads);
 }
@@ -186,6 +188,21 @@ function renderSelectedLead() {
       </div>
     </div>
 
+    <section class="crm-summary-panel">
+      <div class="crm-section-heading">
+        <h4>Smart Summary</h4>
+        <p class="crm-detail-note">A quick read on what matters most before you reach out.</p>
+      </div>
+      <p class="crm-smart-summary">${escapeHtml(buildSmartSummary(lead))}</p>
+    </section>
+
+    <div class="crm-snapshot-grid">
+      ${renderSnapshotCard("Follow-Up Rank", lead["Follow-Up Rank"] || "Rank A")}
+      ${renderSnapshotCard("Last Contact", lead["Last Contact Date"] ? formatLongDate(lead["Last Contact Date"]) : "Not logged")}
+      ${renderSnapshotCard("Next Follow-Up", lead["Next Follow-Up Date"] ? formatLongDate(lead["Next Follow-Up Date"]) : "Not set")}
+      ${renderSnapshotCard("Consent to Text", lead["Consent to Text"] || "Not set")}
+    </div>
+
     <div class="crm-detail-grid">
       ${renderDetailItem("Phone", lead["Phone"] || "Not provided")}
       ${renderDetailItem("Email", lead["Email"] || "Not provided")}
@@ -194,6 +211,29 @@ function renderSelectedLead() {
       ${renderDetailItem("Budget", lead["Budget"] || "Not provided")}
       ${renderDetailItem("Business Email", lead["Business Email"] || "Not provided")}
     </div>
+
+    <section class="crm-timeline-panel">
+      <div class="crm-section-heading">
+        <h4>Lead History</h4>
+        <p class="crm-detail-note">A quick timeline of what has happened and what needs to happen next.</p>
+      </div>
+      <div class="crm-timeline-list">
+        ${renderTimeline(lead)}
+      </div>
+    </section>
+
+    <section class="crm-action-panel">
+      <div class="crm-section-heading">
+        <h4>Quick Actions</h4>
+        <p class="crm-detail-note">Handle the most common next steps without editing every field manually.</p>
+      </div>
+      <div class="crm-action-grid">
+        <button type="button" class="crm-action-button" data-quick-action="contactedToday">Mark Contacted Today</button>
+        <button type="button" class="crm-action-button" data-quick-action="push2">Push Follow-Up 2 Days</button>
+        <button type="button" class="crm-action-button" data-quick-action="setWarm">Set as Warm</button>
+        <button type="button" class="crm-action-button" data-quick-action="copyMessage">Copy Follow-Up Text</button>
+      </div>
+    </section>
 
     <form id="leadEditForm" class="crm-form-grid">
       ${renderInput("Name", lead["Name"])}
@@ -233,6 +273,66 @@ function renderSelectedLead() {
     } catch {
       elements.statusText.textContent = "Unable to copy transcript from this browser.";
     }
+  });
+
+  document.querySelectorAll("[data-quick-action]").forEach((button) => {
+    button.addEventListener("click", () => handleQuickAction(lead, button.getAttribute("data-quick-action") || ""));
+  });
+}
+
+function renderPipelineBoard() {
+  if (!elements.pipelineBoard) {
+    return;
+  }
+
+  const statuses = ["New", "Active", "Warm", "Closed"];
+
+  elements.pipelineBoard.innerHTML = statuses.map((status) => {
+    const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
+    const leadMarkup = leads.slice(0, 6).map((lead) => {
+      const isSelected = lead["Lead ID"] === state.selectedLeadId;
+      const dueState = getDueState(lead["Next Follow-Up Date"]);
+      const displayName = lead["Name"] || lead["Email"] || lead["Phone"] || "Unnamed lead";
+
+      return `
+        <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
+          <strong>${escapeHtml(displayName)}</strong>
+          <span>${escapeHtml(lead["Lead Type"] || "Lead")}</span>
+          ${renderPill(dueState.label, dueState.className)}
+        </button>
+      `;
+    }).join("");
+
+    return `
+      <section class="crm-pipeline-column">
+        <div class="crm-pipeline-head">
+          <div>
+            <span class="crm-pipeline-label">${escapeHtml(status)}</span>
+            <strong>${String(leads.length)}</strong>
+          </div>
+          <button type="button" class="crm-pipeline-filter" data-pipeline-filter="${escapeHtml(status)}">View</button>
+        </div>
+        <div class="crm-pipeline-stack">
+          ${leadMarkup || `<div class="crm-pipeline-empty">No ${status.toLowerCase()} leads.</div>`}
+        </div>
+      </section>
+    `;
+  }).join("");
+
+  elements.pipelineBoard.querySelectorAll("[data-pipeline-lead-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedLeadId = button.getAttribute("data-pipeline-lead-id") || "";
+      renderLeadList();
+      renderPipelineBoard();
+      renderSelectedLead();
+    });
+  });
+
+  elements.pipelineBoard.querySelectorAll("[data-pipeline-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      elements.leadStatusFilter.value = button.getAttribute("data-pipeline-filter") || "";
+      applyFilters();
+    });
   });
 }
 
@@ -335,12 +435,304 @@ function formatShortDate(value) {
   });
 }
 
+function formatLongDate(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not set";
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
 function renderPill(text, className = "") {
   return text ? `<span class="crm-pill ${className}">${escapeHtml(text)}</span>` : "";
 }
 
 function renderDetailItem(label, value) {
   return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function renderSnapshotCard(label, value) {
+  return `<article class="crm-snapshot-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`;
+}
+
+function renderTimeline(lead) {
+  const events = buildTimelineEvents(lead);
+
+  if (!events.length) {
+    return `<div class="crm-timeline-empty">No timeline events yet.</div>`;
+  }
+
+  return events.map((event) => `
+    <article class="crm-timeline-item">
+      <div class="crm-timeline-marker ${escapeHtml(event.tone || "")}"></div>
+      <div class="crm-timeline-content">
+        <span>${escapeHtml(event.dateLabel)}</span>
+        <strong>${escapeHtml(event.title)}</strong>
+        <p>${escapeHtml(event.body)}</p>
+      </div>
+    </article>
+  `).join("");
+}
+
+function buildTimelineEvents(lead) {
+  const events = [];
+
+  if (lead["Date"]) {
+    events.push({
+      dateLabel: formatLongDate(lead["Date"]),
+      title: "Lead entered the CRM",
+      body: `${lead["Lead Type"] || "Lead"} from ${lead["Source"] || "unknown source"} was captured.`,
+      tone: "is-neutral"
+    });
+  }
+
+  if (lead["Last Contact Date"]) {
+    events.push({
+      dateLabel: formatLongDate(lead["Last Contact Date"]),
+      title: "Last contact logged",
+      body: `Most recent outreach was marked on this date. Current status is ${lead["Lead Status"] || "New"}.`,
+      tone: "is-complete"
+    });
+  }
+
+  if (lead["Next Follow-Up Date"]) {
+    const dueState = getDueState(lead["Next Follow-Up Date"]);
+    events.push({
+      dateLabel: formatLongDate(lead["Next Follow-Up Date"]),
+      title: "Next follow-up scheduled",
+      body: `${dueState.label}. Priority is ${lead["Follow-Up Rank"] || "Rank A"}.`,
+      tone: dueState.className === "is-overdue" ? "is-alert" : (dueState.className === "is-today" ? "is-today" : "is-upcoming")
+    });
+  }
+
+  if (lead["Latest Message / Notes"]) {
+    events.push({
+      dateLabel: "Latest note",
+      title: "Notes on file",
+      body: truncateForTimeline(lead["Latest Message / Notes"]),
+      tone: "is-note"
+    });
+  }
+
+  return events;
+}
+
+function truncateForTimeline(value) {
+  const text = String(value || "").trim();
+  if (text.length <= 160) {
+    return text;
+  }
+
+  return `${text.slice(0, 157).trim()}...`;
+}
+
+function buildSmartSummary(lead) {
+  const parts = [];
+  const leadType = cleanValue(lead["Lead Type"]);
+  const area = cleanValue(lead["Area"]);
+  const timeline = cleanValue(lead["Timeline"]);
+  const budget = cleanValue(lead["Budget"]);
+  const goal = cleanValue(lead["Goal / Context"]);
+  const notes = cleanValue(lead["Latest Message / Notes"]);
+  const source = cleanValue(lead["Source"]);
+  const dueState = getDueState(lead["Next Follow-Up Date"]);
+  const status = cleanValue(lead["Lead Status"]);
+  const rank = cleanValue(lead["Follow-Up Rank"]);
+
+  if (leadType) {
+    parts.push(`${withArticle_(leadType)} lead`);
+  } else {
+    parts.push("Lead");
+  }
+
+  if (area) {
+    parts.push(`focused on ${area}`);
+  }
+
+  if (timeline) {
+    parts.push(`timeline: ${timeline}`);
+  }
+
+  if (budget) {
+    parts.push(`budget around ${formatBudgetSummary(budget)}`);
+  }
+
+  if (goal) {
+    parts.push(`context: ${truncateSentence(goal, 90)}`);
+  } else if (notes) {
+    parts.push(`notes: ${truncateSentence(notes, 90)}`);
+  }
+
+  if (source) {
+    parts.push(`came in through ${source}`);
+  }
+
+  if (status) {
+    parts.push(`currently marked ${status.toLowerCase()}`);
+  }
+
+  if (rank) {
+    parts.push(`priority ${rank}`);
+  }
+
+  if (dueState.className === "is-overdue") {
+    parts.push("follow-up is overdue");
+  } else if (dueState.className === "is-today") {
+    parts.push("follow-up is due today");
+  } else if (lead["Next Follow-Up Date"]) {
+    parts.push(`next follow-up is ${formatLongDate(lead["Next Follow-Up Date"])}`);
+  }
+
+  const summary = joinSummaryParts(parts);
+  return summary || "Lead is in the CRM, but there is not enough detail yet for a smarter summary.";
+}
+
+function joinSummaryParts(parts) {
+  const filtered = parts.filter(Boolean);
+  if (!filtered.length) {
+    return "";
+  }
+
+  const first = filtered[0];
+  const rest = filtered.slice(1);
+  const sentence = [capitalizeSentence(first), ...rest].join(", ");
+  return `${sentence}.`;
+}
+
+function capitalizeSentence(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function cleanValue(value) {
+  const text = String(value || "").trim();
+  return text && text.toLowerCase() !== "not provided" ? text : "";
+}
+
+function truncateSentence(value, maxLength) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 3).trim()}...`;
+}
+
+function formatBudgetSummary(value) {
+  const text = String(value || "").trim();
+  const digits = text.replace(/[^\d.]/g, "");
+
+  if (!digits) {
+    return text;
+  }
+
+  const amount = Number(digits);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return text;
+  }
+
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  });
+}
+
+function withArticle_(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  return /^[aeiou]/i.test(text) ? `an ${text}` : `a ${text}`;
+}
+
+async function handleQuickAction(lead, action) {
+  if (!lead || !lead["Lead ID"]) {
+    return;
+  }
+
+  if (action === "copyMessage") {
+    try {
+      await navigator.clipboard.writeText(String(lead["Assigned Message"] || ""));
+      elements.statusText.textContent = "Follow-up message copied to clipboard.";
+    } catch {
+      elements.statusText.textContent = "Unable to copy follow-up message from this browser.";
+    }
+    return;
+  }
+
+  const payload = {
+    action: "updateLead",
+    leadId: lead["Lead ID"]
+  };
+
+  if (action === "contactedToday") {
+    const today = toIsoDate(new Date());
+    payload["Last Contact Date"] = today;
+    payload["Next Follow-Up Date"] = toIsoDate(addDaysToDate(new Date(), 2));
+    payload["Lead Status"] = lead["Lead Status"] === "Closed" ? "Closed" : "Active";
+  }
+
+  if (action === "push2") {
+    const baseDate = lead["Next Follow-Up Date"] ? new Date(lead["Next Follow-Up Date"]) : new Date();
+    payload["Next Follow-Up Date"] = toIsoDate(addDaysToDate(baseDate, 2));
+  }
+
+  if (action === "setWarm") {
+    payload["Lead Status"] = "Warm";
+    payload["Follow-Up Rank"] = "Rank B";
+  }
+
+  if (Object.keys(payload).length <= 2) {
+    return;
+  }
+
+  await saveLeadPatch(payload);
+}
+
+async function saveLeadPatch(payload) {
+  if (state.isSaving) {
+    return;
+  }
+
+  state.isSaving = true;
+  renderSelectedLead();
+  elements.statusText.textContent = "Saving quick action.";
+
+  try {
+    const response = await fetch("/crm/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Unable to save quick action.");
+    }
+
+    elements.statusText.textContent = "Quick action saved.";
+    await loadLeads();
+  } catch (error) {
+    elements.statusText.textContent = error.message || "Unable to save quick action.";
+  } finally {
+    state.isSaving = false;
+    renderSelectedLead();
+  }
 }
 
 function renderInput(label, value = "", type = "text") {
@@ -397,4 +789,17 @@ function normalizeDateInputValue(value) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function toIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysToDate(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 }

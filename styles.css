@@ -132,8 +132,47 @@ body::before {
 }
 
 .nav a {
+  position: relative;
+  display: inline-block;
   font-size: 0.95rem;
   color: var(--muted);
+  padding-bottom: 6px;
+  transition: color 180ms ease;
+}
+
+.nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(181, 138, 82, 0.15), rgba(138, 75, 58, 0.95), rgba(181, 138, 82, 0.15));
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0;
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  color: var(--ink);
+}
+
+.nav a:hover::after,
+.nav a:focus-visible::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.nav a[aria-current="page"] {
+  color: var(--ink);
+}
+
+.nav a[aria-current="page"]::after {
+  transform: scaleX(1);
+  opacity: 1;
 }
 
 .social-link {
