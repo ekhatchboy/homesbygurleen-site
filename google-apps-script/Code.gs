@@ -65,7 +65,7 @@ function doPost(e) {
     const action = String(payload.action || "").trim();
 
     if (action === "updateLead") {
-      authorizeCrm_(e);
+      authorizeCrm_(e, payload);
       setupSheets();
 
       return jsonResponse_({
@@ -438,9 +438,14 @@ function getHeaderValue_(e, headerName) {
   return "";
 }
 
-function authorizeCrm_(e) {
+function authorizeCrm_(e, payload) {
   const expected = PropertiesService.getScriptProperties().getProperty("CRM_API_TOKEN");
-  const provided = getRequestParameter_(e, "crmToken") || getHeaderValue_(e, "x-crm-token");
+  const provided = String(
+    (payload && payload.crmToken) ||
+    getRequestParameter_(e, "crmToken") ||
+    getHeaderValue_(e, "x-crm-token") ||
+    ""
+  ).trim();
 
   if (!expected || expected !== provided) {
     throw new Error("Unauthorized");
