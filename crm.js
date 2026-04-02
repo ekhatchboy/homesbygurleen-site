@@ -33,7 +33,9 @@ async function loadLeads() {
   elements.statusText.textContent = "Loading leads from your master sheet.";
 
   try {
-    const response = await fetch("/crm/leads");
+    const response = await fetch(`/crm/leads?ts=${Date.now()}`, {
+      cache: "no-store"
+    });
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
@@ -232,12 +234,8 @@ async function saveLead(leadId, formData) {
       throw new Error(result.error || "Unable to save lead.");
     }
 
-    const updatedLead = result.lead || payload;
-    state.leads = state.leads.map((lead) => (
-      lead["Lead ID"] === leadId ? { ...lead, ...updatedLead } : lead
-    ));
     elements.statusText.textContent = "Lead saved successfully.";
-    applyFilters();
+    await loadLeads();
   } catch (error) {
     elements.statusText.textContent = error.message || "Unable to save lead.";
   } finally {
@@ -325,10 +323,11 @@ function renderDetailItem(label, value) {
 }
 
 function renderInput(label, value = "", type = "text") {
+  const normalizedValue = type === "date" ? normalizeDateInputValue(value) : (value || "");
   return `
     <label>
       <span>${escapeHtml(label)}</span>
-      <input name="${escapeHtml(label)}" type="${escapeHtml(type)}" value="${escapeAttribute(value || "")}">
+      <input name="${escapeHtml(label)}" type="${escapeHtml(type)}" value="${escapeAttribute(normalizedValue)}">
     </label>
   `;
 }
@@ -366,4 +365,27 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
   return escapeHtml(value).replaceAll("\n", "&#10;");
+}
+
+function normalizeDateInputValue(value) {
+  if (!value) {
+    return "";
+  }
+
+  const stringValue = String(value).trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
+    return stringValue;
+  }
+
+  const date = new Date(stringValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
