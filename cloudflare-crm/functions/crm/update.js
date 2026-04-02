@@ -10,15 +10,16 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
+    const url = new URL(env.CRM_SHEETS_URL);
+    url.searchParams.set("crmToken", env.CRM_API_TOKEN);
 
-    const upstream = await fetch(env.CRM_SHEETS_URL, {
+    const upstream = await fetch(url.toString(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        ...body,
-        crmToken: env.CRM_API_TOKEN
+        ...body
       })
     });
 
