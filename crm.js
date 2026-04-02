@@ -19,7 +19,10 @@ const elements = {
   metricTotal: document.querySelector("#metricTotal"),
   metricNew: document.querySelector("#metricNew"),
   metricActive: document.querySelector("#metricActive"),
-  metricDue: document.querySelector("#metricDue")
+  metricDue: document.querySelector("#metricDue"),
+  heroMetricTotal: document.querySelector('[data-hero-metric="total"]'),
+  heroMetricNew: document.querySelector('[data-hero-metric="new"]'),
+  heroMetricDue: document.querySelector('[data-hero-metric="due"]')
 };
 
 initialize();
@@ -391,6 +394,9 @@ function updateMetrics(leads) {
   elements.metricNew.textContent = String(newCount);
   elements.metricActive.textContent = String(activeCount);
   elements.metricDue.textContent = String(dueCount);
+  if (elements.heroMetricTotal) elements.heroMetricTotal.textContent = String(total);
+  if (elements.heroMetricNew) elements.heroMetricNew.textContent = String(newCount);
+  if (elements.heroMetricDue) elements.heroMetricDue.textContent = String(dueCount);
 }
 
 function getDueState(dateValue) {

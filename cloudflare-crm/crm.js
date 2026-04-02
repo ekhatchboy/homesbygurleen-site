@@ -19,8 +19,11 @@ const elements = {
   metricTotal: document.querySelector("#metricTotal"),
   metricNew: document.querySelector("#metricNew"),
   metricActive: document.querySelector("#metricActive"),
-  metricDue: document.querySelector("#metricDue")
-};
+  metricDue: document.querySelector("#metricDue"),
+  heroMetricTotal: document.querySelector('[data-hero-metric="total"]'),
+  heroMetricNew: document.querySelector('[data-hero-metric="new"]'),
+  heroMetricDue: document.querySelector('[data-hero-metric="due"]')
+  };
 
 initialize();
 
@@ -379,14 +382,22 @@ async function saveLead(leadId, formData) {
 }
 
 function updateMetrics(leads) {
-  elements.metricTotal.textContent = String(leads.length);
-  elements.metricNew.textContent = String(leads.filter((lead) => lead["Lead Status"] === "New").length);
-  elements.metricActive.textContent = String(leads.filter((lead) => lead["Lead Status"] === "Active").length);
-  elements.metricDue.textContent = String(leads.filter((lead) => {
-    const dueState = getDueState(lead["Next Follow-Up Date"]);
-    return dueState.className === "is-today" || dueState.className === "is-overdue";
-  }).length);
-}
+  const total = leads.length;
+  const newCount = leads.filter((lead) => lead["Lead Status"] === "New").length;
+  const activeCount = leads.filter((lead) => lead["Lead Status"] === "Active").length;
+  const dueCount = leads.filter((lead) => {
+      const dueState = getDueState(lead["Next Follow-Up Date"]);
+      return dueState.className === "is-today" || dueState.className === "is-overdue";
+    }).length;
+
+  elements.metricTotal.textContent = String(total);
+  elements.metricNew.textContent = String(newCount);
+  elements.metricActive.textContent = String(activeCount);
+  elements.metricDue.textContent = String(dueCount);
+  if (elements.heroMetricTotal) elements.heroMetricTotal.textContent = String(total);
+  if (elements.heroMetricNew) elements.heroMetricNew.textContent = String(newCount);
+  if (elements.heroMetricDue) elements.heroMetricDue.textContent = String(dueCount);
+  }
 
 function getDueState(dateValue) {
   if (!dateValue) {

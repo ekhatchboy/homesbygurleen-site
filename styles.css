@@ -136,23 +136,26 @@ body::before {
   display: inline-block;
   font-size: 0.95rem;
   color: var(--muted);
-  padding-bottom: 6px;
+  padding-bottom: 12px;
   transition: color 180ms ease;
 }
 
 .nav a::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1.5px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(181, 138, 82, 0.15), rgba(138, 75, 58, 0.95), rgba(181, 138, 82, 0.15));
+  left: 50%;
+  bottom: -2px;
+  width: 122%;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 18' preserveAspectRatio='none'%3E%3Cpath d='M2 11.5C20 16.5 38 16 58 9.8C76 4.2 97 2.6 118 7.8' fill='none' stroke='%238a4b3a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
   transform: scaleX(0);
   transform-origin: center;
   opacity: 0;
-  transition: transform 220ms ease, opacity 220ms ease;
+  translate: -50% 0;
+  transition: transform 240ms ease, opacity 240ms ease;
 }
 
 .nav a:hover,

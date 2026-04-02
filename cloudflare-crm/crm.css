@@ -151,15 +151,22 @@ body::after {
 }
 
 .crm-hero {
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);
+  align-items: stretch;
 }
 
 .crm-copy h1 {
   margin: 0 0 14px;
-  font-size: clamp(2.7rem, 6vw, 4.7rem);
-  line-height: 0.94;
-  max-width: 10.5ch;
+  font-size: clamp(2.25rem, 4.5vw, 3.7rem);
+  line-height: 0.98;
+  max-width: 8.4ch;
   text-wrap: balance;
+}
+
+.crm-copy {
+  display: grid;
+  align-content: space-between;
+  min-height: 320px;
 }
 
 .hero-text,
@@ -172,13 +179,72 @@ body::after {
 }
 
 .crm-status-card {
+  display: grid;
+  align-content: start;
+  gap: 18px;
   background: linear-gradient(180deg, rgba(255, 251, 245, 0.98), rgba(231, 220, 206, 0.92));
 }
 
 .crm-status-card strong {
   display: block;
-  margin: 10px 0 8px;
-  font-size: 2rem;
+  margin: 6px 0 0;
+  font-size: 1.9rem;
+}
+
+.crm-status-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.crm-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(102, 116, 97, 0.12);
+  color: #465441;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.crm-status-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #5f8a5e;
+  box-shadow: 0 0 0 4px rgba(95, 138, 94, 0.12);
+}
+
+.crm-status-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.crm-status-mini {
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(64, 38, 26, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.crm-status-mini span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.crm-status-mini strong {
+  margin: 0;
+  font-size: 1.45rem;
 }
 
 .crm-summary {
@@ -793,6 +859,10 @@ body::after {
   .crm-action-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .crm-status-mini-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -806,6 +876,12 @@ body::after {
   .crm-form-actions,
   .crm-detail-grid,
   .crm-form-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .crm-status-head,
+  .crm-status-mini-grid {
     grid-template-columns: 1fr;
     display: grid;
   }
