@@ -78,8 +78,6 @@ function applyFilters() {
       lead["Phone"],
       lead["Email"],
       lead["Area"],
-      lead["Buying Area"],
-      lead["Selling Location"],
       lead["Lead Type"],
       lead["Latest Message / Notes"]
     ].join(" ").toLowerCase();
@@ -211,9 +209,7 @@ function renderSelectedLead() {
     <div class="crm-detail-grid">
       ${renderDetailItem("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "Not provided")}
       ${renderDetailItem("Email", lead["Email"] || "Not provided")}
-      ${renderDetailItem("Location Summary", lead["Area"] || "Not provided")}
-      ${renderDetailItem("Buying Area", lead["Buying Area"] || "Not provided")}
-      ${renderDetailItem("Selling Location", lead["Selling Location"] || "Not provided")}
+      ${renderDetailItem("Location", lead["Area"] || "Not provided")}
       ${renderDetailItem("Timeline", lead["Timeline"] || "Not provided")}
       ${renderDetailItem("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "Not provided")}
     </div>
@@ -247,8 +243,6 @@ function renderSelectedLead() {
       ${renderInput("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "")}
       ${renderInput("Email", lead["Email"])}
       ${renderInput("Area", lead["Area"])}
-      ${renderInput("Buying Area", lead["Buying Area"])}
-      ${renderInput("Selling Location", lead["Selling Location"])}
       ${renderInput("Timeline", lead["Timeline"])}
       ${renderInput("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "")}
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
@@ -552,8 +546,6 @@ function buildSmartSummary(lead) {
   const parts = [];
   const leadType = cleanValue(lead["Lead Type"]);
   const area = cleanValue(lead["Area"]);
-  const buyingArea = cleanValue(lead["Buying Area"]);
-  const sellingLocation = cleanValue(lead["Selling Location"]);
   const timeline = cleanValue(lead["Timeline"]);
   const budget = cleanValue(lead["Budget"]);
   const goal = cleanValue(lead["Goal / Context"]);
@@ -569,15 +561,7 @@ function buildSmartSummary(lead) {
     parts.push("Lead");
   }
 
-  if (buyingArea) {
-    parts.push(`buying area: ${buyingArea}`);
-  }
-
-  if (sellingLocation) {
-    parts.push(`selling location: ${sellingLocation}`);
-  }
-
-  if (!buyingArea && !sellingLocation && area) {
+  if (area) {
     parts.push(`focused on ${area}`);
   }
 
