@@ -52,7 +52,7 @@ body::after {
 .page-shell {
   position: relative;
   z-index: 1;
-  width: min(1560px, calc(100% - 36px));
+  width: min(1660px, calc(100% - 40px));
   margin: 0 auto;
   padding: 28px 0 64px;
 }
@@ -159,14 +159,19 @@ body::after {
   margin: 0 0 14px;
   font-size: clamp(2.25rem, 4.5vw, 3.7rem);
   line-height: 0.98;
-  max-width: 8.4ch;
+  max-width: 13.5ch;
   text-wrap: balance;
 }
 
 .crm-copy {
   display: grid;
-  align-content: space-between;
-  min-height: 320px;
+  align-content: center;
+  min-height: 280px;
+  gap: 12px;
+}
+
+.hero-text {
+  max-width: 58ch;
 }
 
 .hero-text,
@@ -278,9 +283,9 @@ body::after {
 }
 
 .crm-workspace {
-  grid-template-columns: minmax(380px, 0.88fr) minmax(0, 1.46fr);
+  grid-template-columns: minmax(340px, 0.78fr) minmax(0, 1.62fr);
   align-items: start;
-  gap: 28px;
+  gap: 30px;
 }
 
 .crm-pipeline-card {
@@ -564,15 +569,15 @@ body::after {
 
 .crm-detail-card {
   min-height: 780px;
-  padding: 30px;
+  padding: 28px;
   background: linear-gradient(180deg, rgba(255, 251, 247, 0.98), rgba(241, 232, 222, 0.94));
 }
 
 .crm-detail-grid,
 .crm-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .crm-snapshot-grid {

@@ -66,8 +66,17 @@ body.site-background::after {
 
 .crm-copy {
   display: grid;
-  align-content: space-between;
-  min-height: 320px;
+  align-content: center;
+  min-height: 280px;
+  gap: 12px;
+}
+
+.crm-copy h1 {
+  max-width: 13.5ch;
+}
+
+.hero-text {
+  max-width: 58ch;
 }
 
 .crm-copy::after,
@@ -202,9 +211,9 @@ body.site-background::after {
 }
 
 .crm-workspace {
-  grid-template-columns: minmax(380px, 0.88fr) minmax(0, 1.46fr);
+  grid-template-columns: minmax(340px, 0.78fr) minmax(0, 1.62fr);
   align-items: start;
-  gap: 28px;
+  gap: 30px;
 }
 
 .crm-pipeline-card {
@@ -505,15 +514,15 @@ body.site-background::after {
 
 .crm-detail-card {
   min-height: 780px;
-  padding: 30px;
+  padding: 28px;
   background: linear-gradient(180deg, rgba(255, 251, 247, 0.98), rgba(241, 232, 222, 0.94));
 }
 
 .crm-detail-grid,
 .crm-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .crm-snapshot-grid {
@@ -835,4 +844,7 @@ body.site-background::after {
     grid-template-columns: 1fr;
     display: grid;
   }
+}
+.page-shell {
+  width: min(1660px, calc(100% - 40px));
 }
