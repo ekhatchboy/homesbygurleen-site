@@ -33,6 +33,80 @@ function setupSheets() {
   formatMasterLeadSheet_(masterSheet);
 }
 
+function backupMasterLeads() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = getMasterLeadSheet_();
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HHmm");
+  const backupName = `Master Leads Backup ${timestamp}`;
+  const existingSheet = spreadsheet.getSheetByName(backupName);
+
+  if (existingSheet) {
+    throw new Error(`Backup sheet already exists: ${backupName}`);
+  }
+
+  const backupSheet = spreadsheet.insertSheet(backupName);
+  const sourceRange = sourceSheet.getDataRange();
+  const values = sourceRange.getValues();
+
+  if (values.length && values[0].length) {
+    backupSheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+  }
+
+  const lastRow = sourceSheet.getLastRow();
+  const lastColumn = sourceSheet.getLastColumn();
+
+  if (lastRow > 0 && lastColumn > 0) {
+    sourceSheet.getRange(1, 1, lastRow, lastColumn).copyFormatToRange(backupSheet, 1, lastColumn, 1, lastRow);
+    backupSheet.setFrozenRows(sourceSheet.getFrozenRows());
+    backupSheet.setFrozenColumns(sourceSheet.getFrozenColumns());
+    copySheetDimensions_(sourceSheet, backupSheet, lastRow, lastColumn);
+  }
+
+  return backupName;
+}
+
+function backupMasterLeadsDaily() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const dateStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  const backupName = `Master Leads Backup ${dateStamp}`;
+  const existingSheet = spreadsheet.getSheetByName(backupName);
+
+  if (existingSheet) {
+    return backupName;
+  }
+
+  const sourceSheet = getMasterLeadSheet_();
+  const backupSheet = spreadsheet.insertSheet(backupName);
+  const sourceRange = sourceSheet.getDataRange();
+  const values = sourceRange.getValues();
+
+  if (values.length && values[0].length) {
+    backupSheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+  }
+
+  const lastRow = sourceSheet.getLastRow();
+  const lastColumn = sourceSheet.getLastColumn();
+
+  if (lastRow > 0 && lastColumn > 0) {
+    sourceSheet.getRange(1, 1, lastRow, lastColumn).copyFormatToRange(backupSheet, 1, lastColumn, 1, lastRow);
+    backupSheet.setFrozenRows(sourceSheet.getFrozenRows());
+    backupSheet.setFrozenColumns(sourceSheet.getFrozenColumns());
+    copySheetDimensions_(sourceSheet, backupSheet, lastRow, lastColumn);
+  }
+
+  return backupName;
+}
+
+function copySheetDimensions_(sourceSheet, targetSheet, lastRow, lastColumn) {
+  for (let column = 1; column <= lastColumn; column += 1) {
+    targetSheet.setColumnWidth(column, sourceSheet.getColumnWidth(column));
+  }
+
+  for (let row = 1; row <= lastRow; row += 1) {
+    targetSheet.setRowHeight(row, sourceSheet.getRowHeight(row));
+  }
+}
+
 function doGet(e) {
   try {
     const mode = String((e && e.parameter && e.parameter.mode) || "").trim();
@@ -367,6 +441,7 @@ function backfillReferralResponses() {
 }
 
 function backfillAllLinkedForms() {
+  backupMasterLeadsDaily();
   [
     "Buyer form",
     "Seller form",
