@@ -11,10 +11,13 @@ const config = {
 };
 
 const leadProfile = {
+  name: "",
   intent: "",
   timeline: "",
   area: "",
   budget: "",
+  phone: "",
+  email: "",
   contact: ""
 };
 
@@ -26,7 +29,7 @@ const transcript = [
   {
     role: "assistant",
     content:
-      "Hi, I'm the AI Concierge. I can help with buying, selling, home valuation requests, and booking a call. Are you looking to buy, sell, or just exploring right now?"
+      "Hi, I'm the AI Concierge. Are you buying, selling, or just exploring?"
   }
 ];
 
@@ -34,17 +37,17 @@ const demoReplies = [
   {
     test: (text) => !leadProfile.intent && /\b(buy|buying|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
     reply:
-      "Great. To point you the right way, what area are you hoping to buy in, what timeline are you working with, and what's the best email or phone number for follow-up?"
+      "Great. To point you the right way, what area are you hoping to buy in, what timeline are you working with, and what's your name and best phone number or email for follow-up?"
   },
   {
     test: (text) => !leadProfile.intent && /\b(sell|selling|seller|listing|home valuation|value my home)\b/i.test(text),
     reply:
-      "Absolutely. What city is the home in, how soon are you thinking of moving, and what's the best email or phone number for follow-up?"
+      "Absolutely. What city is the home in, how soon are you thinking of moving, and what's your name and best phone number or email for follow-up?"
   },
   {
     test: (text) => !leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text),
     reply:
-      "Of course. What area are they looking in, what timeline do they have, and what's the best contact info for follow-up?"
+      "Of course. What area are they looking in, what timeline do they have, and what's your name and best contact info for follow-up?"
   },
   {
     test: (text) => !leadProfile.timeline && /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
@@ -54,17 +57,17 @@ const demoReplies = [
   {
     test: (text) => !leadProfile.budget && /\b(\$|budget|million|k\b|cash)\b/i.test(text),
     reply:
-      "That gives me a solid picture. What's the best phone number or email for follow-up?"
+      "That gives me a solid picture. What's your name and best phone number or email for follow-up?"
   },
   {
     test: (text) => !leadProfile.contact && /\b(@|email|phone|call me|text me)\b/i.test(text),
     reply:
-      "Perfect. The next best step would usually be a consult, a showing request, or a valuation call."
+      "Perfect. And what name should I put this under?"
   },
   {
     test: (text) => /\b(pre-approved|approved)\b/i.test(text),
     reply:
-      "Nice, that makes the next step easier. What's the best phone number or email for follow-up?"
+      "Nice, that makes the next step easier. What's your name and best phone number or email for follow-up?"
   }
 ];
 
@@ -133,12 +136,12 @@ function getDemoReply(text) {
   }
 
   if (!leadProfile.intent) {
-    return "I can help with buying, selling, relocation, or referrals. Which of those best fits what you need?";
+    return "Are you buying, selling, or helping with a referral?";
   }
 
   if (leadProfile.intent === "buyer") {
     if (!leadProfile.area) {
-      return "Which area or neighborhood are you focused on?";
+      return "Which area are you focused on?";
     }
 
     if (!leadProfile.timeline) {
@@ -146,19 +149,23 @@ function getDemoReply(text) {
     }
 
     if (!leadProfile.budget) {
-      return "Do you have a budget range in mind yet?";
+      return "Do you have a budget range in mind?";
     }
 
     if (!leadProfile.contact) {
-      return "What's the best email or phone number for follow-up?";
+      return "What's your name and best email or phone number for follow-up?";
     }
 
-    return "Perfect. The next best step would usually be a buyer consult or a showing request.";
+    if (!leadProfile.name) {
+      return "And what name should I put this under?";
+    }
+
+    return "Perfect. The next step would usually be a buyer consult or showing.";
   }
 
   if (leadProfile.intent === "seller") {
     if (!leadProfile.area) {
-      return "What city or area is the home in?";
+      return "What city is the home in?";
     }
 
     if (!leadProfile.timeline) {
@@ -166,15 +173,19 @@ function getDemoReply(text) {
     }
 
     if (!leadProfile.contact) {
-      return "What's the best email or phone number for follow-up?";
+      return "What's your name and best email or phone number for follow-up?";
     }
 
-    return "Perfect. The next best step would usually be a valuation call or listing consultation.";
+    if (!leadProfile.name) {
+      return "And what name should I put this under?";
+    }
+
+    return "Perfect. The next step would usually be a valuation call or listing consult.";
   }
 
   if (leadProfile.intent === "referral") {
     if (!leadProfile.area) {
-      return "What area or city is the referral looking in?";
+      return "What area is the referral looking in?";
     }
 
     if (!leadProfile.timeline) {
@@ -182,13 +193,25 @@ function getDemoReply(text) {
     }
 
     if (!leadProfile.contact) {
-      return "What's the best contact info for follow-up?";
+      return "What's your name and best contact info for follow-up?";
     }
 
-    return "Perfect. The next best step would usually be a referral follow-up or quick consultation.";
+    if (!leadProfile.name) {
+      return "And what name should I put this under?";
+    }
+
+    return "Perfect. The next step would usually be a quick referral follow-up.";
   }
 
-  return "What's the best email or phone number for follow-up?";
+  if (!leadProfile.contact) {
+    return "What's your name and best email or phone number for follow-up?";
+  }
+
+  if (!leadProfile.name) {
+    return "And what name should I put this under?";
+  }
+
+  return "Perfect. The next step would usually be a quick consult or follow-up.";
 }
 
 function updateLeadProfile(text) {
@@ -221,9 +244,50 @@ function updateLeadProfile(text) {
     leadProfile.budget = normalizedText;
   }
 
-  if (!leadProfile.contact && /\S+@\S+\.\S+|\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(text)) {
+  const emailMatch = text.match(/\S+@\S+\.\S+/);
+  if (!leadProfile.email && emailMatch) {
+    leadProfile.email = emailMatch[0];
+  }
+
+  const phoneMatch = text.match(/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/);
+  if (!leadProfile.phone && phoneMatch) {
+    leadProfile.phone = phoneMatch[0];
+  }
+
+  if (!leadProfile.contact && (leadProfile.phone || leadProfile.email)) {
+    leadProfile.contact = [leadProfile.phone, leadProfile.email].filter(Boolean).join(" | ");
+  } else if (!leadProfile.contact && /\S+@\S+\.\S+|\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(text)) {
     leadProfile.contact = normalizedText;
   }
+
+  if (!leadProfile.name) {
+    const inferredName = inferName_(normalizedText);
+    if (inferredName) {
+      leadProfile.name = inferredName;
+    }
+  }
+}
+
+function inferName_(text) {
+  const explicitMatch = text.match(/\b(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z' -]{1,40})/i);
+  if (explicitMatch) {
+    return cleanName_(explicitMatch[1]);
+  }
+
+  if (
+    /^[A-Za-z][A-Za-z' -]{1,40}$/.test(text) &&
+    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|relocate|relocating|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|email|phone|call|text|contact|merced|atwater)\b/i.test(text)
+  ) {
+    return cleanName_(text);
+  }
+
+  return "";
+}
+
+function cleanName_(value) {
+  return String(value || "")
+    .replace(/[.,;:!?]+$/g, "")
+    .trim();
 }
 
 function shouldUseLiveAI(message) {
