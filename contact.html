@@ -89,7 +89,7 @@
             <a class="button button-secondary" href="https://www.instagram.com/homesbygurleen/" target="_blank" rel="noopener noreferrer">Send a DM</a>
           </div>
         </div>
-        <div class="instagram-card">
+        <div class="instagram-card" id="instagramShowcase">
           <div class="instagram-card-head">
             <div>
               <p class="eyebrow">Recent Posts</p>
@@ -97,21 +97,7 @@
             </div>
             <span class="instagram-pill">Lifestyle + real estate</span>
           </div>
-          <div class="instagram-grid" aria-hidden="true">
-            <article class="instagram-tile instagram-tile-feature">
-              <span>Just Listed</span>
-              <strong>Market updates, polished listings, and local insight.</strong>
-            </article>
-            <article class="instagram-tile">
-              <span>Behind the scenes</span>
-            </article>
-            <article class="instagram-tile">
-              <span>Home tours</span>
-            </article>
-            <article class="instagram-tile">
-              <span>Client wins</span>
-            </article>
-          </div>
+          <div class="instagram-grid" id="instagramGrid"></div>
           <p class="instagram-note">A curated preview keeps the page elegant while still giving visitors a visual reason to click through.</p>
         </div>
       </section>
@@ -161,5 +147,45 @@
       </section>
     </main>
   </div>
+  <script>
+    const instagramPosts = [
+      {
+        url: "https://www.instagram.com/homesbygurleen/p/DWPHHIRCY1s/",
+        label: "Featured Post",
+        title: "Market updates and polished listing moments.",
+        tone: "warm"
+      },
+      {
+        url: "https://www.instagram.com/homesbygurleen/p/DVNX9kPDiFv/",
+        label: "Homes By Gurleen",
+        title: "A refined look at the lifestyle behind the brand.",
+        tone: "soft"
+      },
+      {
+        url: "https://www.instagram.com/homesbygurleen/reel/DV6yRExkpwB/",
+        label: "Featured Reel",
+        title: "Short-form walkthrough energy with a local real estate feel.",
+        tone: "deep"
+      }
+    ];
+
+    const shuffledPosts = [...instagramPosts].sort(() => Math.random() - 0.5);
+    const [featuredPost, ...supportingPosts] = shuffledPosts;
+    const instagramGrid = document.getElementById("instagramGrid");
+
+    if (instagramGrid && featuredPost) {
+      instagramGrid.innerHTML = `
+        <a class="instagram-tile instagram-tile-feature is-${featuredPost.tone}" href="${featuredPost.url}" target="_blank" rel="noopener noreferrer">
+          <span>${featuredPost.label}</span>
+          <strong>${featuredPost.title}</strong>
+        </a>
+        ${supportingPosts.map((post) => `
+          <a class="instagram-tile is-${post.tone}" href="${post.url}" target="_blank" rel="noopener noreferrer">
+            <span>${post.label}</span>
+          </a>
+        `).join("")}
+      `;
+    }
+  </script>
 </body>
 </html>
