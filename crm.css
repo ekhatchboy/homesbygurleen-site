@@ -334,6 +334,13 @@ body.site-background::after {
   margin-bottom: 18px;
 }
 
+.crm-card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .crm-card-heading h2,
 .crm-form-heading h3 {
   margin: 0;
@@ -821,6 +828,68 @@ body.site-background::after {
   font-size: 0.92rem;
 }
 
+.crm-modal-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.crm-modal-shell[hidden] {
+  display: none;
+}
+
+.crm-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 21, 18, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.crm-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(980px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 28px;
+  border: 1px solid rgba(64, 38, 26, 0.12);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(239, 228, 216, 0.95));
+  box-shadow: 0 28px 80px rgba(50, 26, 18, 0.2);
+}
+
+.crm-modal-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.crm-modal-head h2 {
+  margin: 0;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 2.2rem;
+}
+
+.crm-modal-close {
+  border: 1px solid rgba(64, 38, 26, 0.12);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--ink);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.crm-modal-form {
+  margin-top: 18px;
+}
+
 @media (max-width: 1080px) {
   .crm-hero,
   .crm-pipeline-board,
@@ -843,6 +912,10 @@ body.site-background::after {
 
   .crm-status-mini-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .crm-modal-card {
+    width: min(100%, 920px);
   }
 }
 
@@ -867,6 +940,22 @@ body.site-background::after {
   .crm-form-heading {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .crm-card-actions {
+    justify-content: stretch;
+  }
+
+  .crm-card-actions .button {
+    width: 100%;
+  }
+
+  .crm-modal-shell {
+    padding: 12px;
+  }
+
+  .crm-modal-card {
+    padding: 22px 18px;
   }
 }
 .page-shell {

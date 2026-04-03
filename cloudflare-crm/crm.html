@@ -97,10 +97,13 @@
       <section class="crm-workspace">
         <aside class="crm-sidebar">
           <div class="crm-card crm-filter-card">
-            <div class="crm-card-heading">
-              <h2>Lead list</h2>
+          <div class="crm-card-heading">
+            <h2>Lead list</h2>
+            <div class="crm-card-actions">
               <button type="button" class="button button-secondary" id="refreshLeadsButton">Refresh</button>
+              <button type="button" class="button button-primary" id="openLeadModalButton">+ Add Lead</button>
             </div>
+          </div>
             <div class="crm-quick-views" id="quickViews">
               <button type="button" class="crm-chip is-active" data-quick-view="all">All</button>
               <button type="button" class="crm-chip" data-quick-view="today">Due Today</button>
@@ -149,6 +152,112 @@
         </section>
       </section>
     </main>
+  </div>
+
+  <div class="crm-modal-shell" id="leadModal" hidden>
+    <div class="crm-modal-backdrop" data-close-lead-modal></div>
+    <section class="crm-modal-card" aria-labelledby="leadModalTitle" aria-modal="true" role="dialog">
+      <div class="crm-modal-head">
+        <div>
+          <p class="hero-kicker">Manual lead</p>
+          <h2 id="leadModalTitle">Add a lead without leaving the CRM.</h2>
+        </div>
+        <button type="button" class="crm-modal-close" id="closeLeadModalButton" aria-label="Close add lead form">×</button>
+      </div>
+      <p class="crm-detail-note">
+        Use this for direct calls, texts, open house conversations, or any lead you want logged quickly.
+      </p>
+      <form id="createLeadForm" class="crm-form-grid crm-modal-form">
+        <label>
+          <span>Name</span>
+          <input name="Name" type="text" placeholder="Lead name">
+        </label>
+        <label>
+          <span>Lead Type</span>
+          <select name="Lead Type">
+            <option value="Buyer">Buyer</option>
+            <option value="Seller">Seller</option>
+            <option value="Buyer + Seller">Buyer + Seller</option>
+            <option value="Referral">Referral</option>
+            <option value="Investor">Investor</option>
+          </select>
+        </label>
+        <label>
+          <span>Phone</span>
+          <input name="Phone" type="text" placeholder="209-555-0123">
+        </label>
+        <label>
+          <span>Email</span>
+          <input name="Email" type="email" placeholder="lead@example.com">
+        </label>
+        <label>
+          <span>Area</span>
+          <input name="Area" type="text" placeholder="Merced, Atwater, or selling address">
+        </label>
+        <label>
+          <span>Timeline</span>
+          <input name="Timeline" type="text" placeholder="ASAP, 3 months, just exploring">
+        </label>
+        <label>
+          <span>Budget</span>
+          <input name="Budget" type="text" placeholder="$500,000">
+        </label>
+        <label>
+          <span>Consent to Text</span>
+          <select name="Consent to Text">
+            <option value="">Not set</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </label>
+        <label>
+          <span>Lead Status</span>
+          <select name="Lead Status">
+            <option value="New">New</option>
+            <option value="Active">Active</option>
+            <option value="Warm">Warm</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </label>
+        <label>
+          <span>Next Follow-Up Date</span>
+          <input name="Next Follow-Up Date" type="date">
+        </label>
+        <label>
+          <span>Follow-Up Rank</span>
+          <select name="Follow-Up Rank">
+            <option value="Rank A">Rank A</option>
+            <option value="Rank B">Rank B</option>
+            <option value="Rank C">Rank C</option>
+          </select>
+        </label>
+        <label>
+          <span>Text Status</span>
+          <select name="Text Status">
+            <option value="Pending Review">Pending Review</option>
+            <option value="Ready">Ready</option>
+            <option value="Sent">Sent</option>
+            <option value="Skipped">Skipped</option>
+          </select>
+        </label>
+        <label class="crm-full">
+          <span>Goal / Context</span>
+          <textarea name="Goal / Context" placeholder="What they need, where they are in the process, or any useful context."></textarea>
+        </label>
+        <label class="crm-full">
+          <span>Latest Message / Notes</span>
+          <textarea name="Latest Message / Notes" placeholder="Anything said on the call, open house, or text exchange."></textarea>
+        </label>
+        <label class="crm-full">
+          <span>Assigned Message</span>
+          <textarea name="Assigned Message" placeholder="Optional custom follow-up message."></textarea>
+        </label>
+        <div class="crm-full crm-form-actions">
+          <button type="submit" class="button button-primary" id="createLeadSubmitButton">Add lead</button>
+          <button type="button" class="button button-secondary" data-close-lead-modal>Cancel</button>
+        </div>
+      </form>
+    </section>
   </div>
 
   <script src="crm.js" type="module"></script>

@@ -149,6 +149,17 @@ function doPost(e) {
       });
     }
 
+    if (action === "createLead") {
+      authorizeCrm_(e, payload);
+      setupSheets();
+      backupMasterLeadsDaily();
+
+      return jsonResponse_({
+        ok: true,
+        lead: handleLeadCreate_(payload)
+      });
+    }
+
     const secret = PropertiesService.getScriptProperties().getProperty("WEBHOOK_SECRET");
     const providedSecret = payload.webhookSecret || getRequestParameter_(e, "webhookSecret") || getHeaderValue_(e, "x-webhook-secret");
 
@@ -1069,6 +1080,109 @@ function handleLeadUpdate_(payload) {
   formatMasterLeadSheet_(sheet);
   const record = getLeadRecords_().find((entry) => entry["Lead ID"] === leadId);
   return record || {};
+}
+
+function handleLeadCreate_(payload) {
+  const sheet = getMasterLeadSheet_();
+  const leadType = normalizeLeadType_(payload["Lead Type"] || "Buyer");
+  const newLeadId = createLeadId_();
+  const nextFollowUpDate = normalizeIncomingDate_(payload["Next Follow-Up Date"]) || formatDate_(addDays_(new Date(), 2));
+  const dateCreated = normalizeIncomingDate_(payload["Date"]) || new Date().toISOString();
+  const phone = formatPhoneValue_(payload["Phone"] || "");
+  const name = String(payload["Name"] || "").trim();
+  const email = String(payload["Email"] || "").trim();
+  const area = String(payload["Area"] || "").trim();
+  const timeline = String(payload["Timeline"] || "").trim();
+  const budget = String(payload["Budget"] || "").trim();
+  const goal = String(payload["Goal / Context"] || "").trim();
+  const notes = String(payload["Latest Message / Notes"] || "").trim();
+  const consent = String(payload["Consent to Text"] || "").trim();
+  const status = String(payload["Lead Status"] || "New").trim();
+  const lastContactDate = normalizeIncomingDate_(payload["Last Contact Date"]);
+  const rank = String(payload["Follow-Up Rank"] || "Rank A").trim();
+  const textStatus = String(payload["Text Status"] || "Pending Review").trim();
+  const assignedMessage = String(payload["Assigned Message"] || "").trim() || buildAssignedMessage_(leadType);
+  const source = String(payload["Source"] || "Manual CRM Entry").trim();
+
+  const row = MASTER_HEADER_ROW.map((header) => {
+    switch (header) {
+      case "Lead ID":
+        return newLeadId;
+      case "Date":
+        return dateCreated;
+      case "Lead Type":
+        return leadType;
+      case "Source":
+        return source;
+      case "Name":
+        return name;
+      case "Phone":
+        return phone;
+      case "Email":
+        return email;
+      case "Area":
+        return area;
+      case "Timeline":
+        return timeline;
+      case "Budget":
+        return budget;
+      case "Goal / Context":
+        return goal;
+      case "Latest Message / Notes":
+        return notes;
+      case "Realtor":
+        return String(payload["Realtor"] || "Gurleen Chahal").trim();
+      case "Brand":
+        return String(payload["Brand"] || "Homes By Gurleen").trim();
+      case "Market":
+        return String(payload["Market"] || "").trim();
+      case "Business Email":
+        return String(payload["Business Email"] || "gurleen@homesbygurleen.com").trim();
+      case "Transcript / Raw Responses":
+        return String(payload["Transcript / Raw Responses"] || "Manual CRM entry.").trim();
+      case "Consent to Text":
+        return consent;
+      case "Lead Status":
+        return status;
+      case "Last Contact Date":
+        return lastContactDate;
+      case "Next Follow-Up Date":
+        return nextFollowUpDate;
+      case "Follow-Up Rank":
+        return rank;
+      case "Text Status":
+        return textStatus;
+      case "Assigned Message":
+        return assignedMessage;
+      default:
+        return "";
+    }
+  });
+
+  sheet.appendRow(row);
+  formatMasterLeadSheet_(sheet);
+  const record = getLeadRecords_().find((entry) => entry["Lead ID"] === newLeadId);
+  return record || {};
+}
+
+function normalizeIncomingDate_(value) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return text;
+  }
+
+  const date = new Date(text);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return formatDate_(date);
 }
 
 function jsonResponse_(data, statusCode) {

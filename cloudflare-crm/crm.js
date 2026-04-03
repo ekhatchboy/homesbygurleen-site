@@ -22,8 +22,12 @@ const elements = {
   metricDue: document.querySelector("#metricDue"),
   heroMetricTotal: document.querySelector('[data-hero-metric="total"]'),
   heroMetricNew: document.querySelector('[data-hero-metric="new"]'),
-  heroMetricDue: document.querySelector('[data-hero-metric="due"]')
-  };
+  heroMetricDue: document.querySelector('[data-hero-metric="due"]'),
+  openLeadModalButton: document.querySelector("#openLeadModalButton"),
+  leadModal: document.querySelector("#leadModal"),
+  createLeadForm: document.querySelector("#createLeadForm"),
+  createLeadSubmitButton: document.querySelector("#createLeadSubmitButton")
+};
 
 initialize();
 
@@ -39,6 +43,22 @@ function initialize() {
     });
   });
   elements.refreshButton?.addEventListener("click", loadLeads);
+  elements.openLeadModalButton?.addEventListener("click", openLeadModal);
+  document.querySelectorAll("[data-close-lead-modal]").forEach((button) => {
+    button.addEventListener("click", closeLeadModal);
+  });
+  elements.createLeadForm?.addEventListener("submit", handleCreateLeadSubmit);
+  elements.leadModal?.addEventListener("click", (event) => {
+    if (event.target === elements.leadModal) {
+      closeLeadModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.leadModal?.hasAttribute("hidden")) {
+      closeLeadModal();
+    }
+  });
+  prefillCreateLeadForm();
   loadLeads();
 }
 
@@ -395,6 +415,66 @@ async function saveLead(leadId, formData) {
   }
 }
 
+async function handleCreateLeadSubmit(event) {
+  event.preventDefault();
+
+  if (state.isSaving || !elements.createLeadForm) {
+    return;
+  }
+
+  const formData = new FormData(elements.createLeadForm);
+  const payload = {
+    action: "createLead"
+  };
+
+  for (const [key, value] of formData.entries()) {
+    if (!String(value || "").trim()) {
+      continue;
+    }
+
+    payload[key] = key === "Phone"
+      ? formatPhoneValue(value)
+      : key === "Budget"
+        ? normalizeBudgetForSave(value)
+        : value;
+  }
+
+  state.isSaving = true;
+  syncCreateLeadButton();
+  elements.statusText.textContent = "Adding lead to your master sheet.";
+
+  try {
+    const response = await fetch("/crm/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Unable to create lead.");
+    }
+
+    if (result.lead && result.lead["Lead ID"]) {
+      upsertLeadInState(result.lead);
+      closeLeadModal({ reset: true });
+      applyFilters();
+      elements.statusText.textContent = "Lead added successfully.";
+      void refreshLeadsInBackground();
+    } else {
+      throw new Error("Lead was created, but no record was returned.");
+    }
+  } catch (error) {
+    elements.statusText.textContent = error.message || "Unable to create lead.";
+  } finally {
+    state.isSaving = false;
+    syncCreateLeadButton();
+  }
+}
+
 function updateMetrics(leads) {
   const total = leads.length;
   const newCount = leads.filter((lead) => lead["Lead Status"] === "New").length;
@@ -688,6 +768,20 @@ function formatBudgetValue(value) {
   });
 }
 
+function normalizeBudgetForSave(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  if (!/^\$?\s*\d[\d,]*(\.\d+)?$/.test(text)) {
+    return text;
+  }
+
+  const amount = Number(text.replace(/[$,\s]/g, ""));
+  return Number.isFinite(amount) ? String(Math.round(amount)) : text;
+}
+
 function formatPhoneValue(value) {
   const text = String(value || "").trim();
   const digits = text.replace(/\D/g, "");
@@ -904,4 +998,49 @@ async function refreshLeadsInBackground() {
   } catch {
     // Keep the optimistic local update if the background refresh fails.
   }
+}
+
+function openLeadModal() {
+  if (!elements.leadModal) {
+    return;
+  }
+
+  prefillCreateLeadForm();
+  elements.leadModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  elements.createLeadForm?.querySelector('input[name="Name"]')?.focus();
+}
+
+function closeLeadModal(options = {}) {
+  if (!elements.leadModal) {
+    return;
+  }
+
+  elements.leadModal.hidden = true;
+  document.body.style.overflow = "";
+
+  if (options.reset) {
+    prefillCreateLeadForm();
+  }
+}
+
+function prefillCreateLeadForm() {
+  if (!elements.createLeadForm) {
+    return;
+  }
+
+  elements.createLeadForm.reset();
+  const nextFollowUpInput = elements.createLeadForm.querySelector('input[name="Next Follow-Up Date"]');
+  if (nextFollowUpInput) {
+    nextFollowUpInput.value = toIsoDate(addDaysToDate(new Date(), 2));
+  }
+}
+
+function syncCreateLeadButton() {
+  if (!elements.createLeadSubmitButton) {
+    return;
+  }
+
+  elements.createLeadSubmitButton.textContent = state.isSaving ? "Adding..." : "Add lead";
+  elements.createLeadSubmitButton.disabled = state.isSaving;
 }
