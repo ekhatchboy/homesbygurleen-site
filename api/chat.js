@@ -145,41 +145,49 @@ async function tryOpenRouterResponse(prompt) {
     return null;
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.APP_BASE_URL || "https://homesbygurleen.com",
-      "X-Title": process.env.BRAND_NAME || "Homes By Gurleen"
-    },
-    body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
-    })
-  });
+  const models = getOpenRouterModels_();
+  const errors = [];
 
-  if (!response.ok) {
-    const details = await safeReadText(response);
-    throw new Error(`OpenRouter failed: ${details || response.status}`);
+  for (const model of models) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.APP_BASE_URL || "https://homesbygurleen.com",
+        "X-Title": process.env.BRAND_NAME || "Homes By Gurleen"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const details = await safeReadText(response);
+      errors.push(`${model}: ${details || response.status}`);
+      continue;
+    }
+
+    const data = await response.json();
+    const reply = String(data?.choices?.[0]?.message?.content || "").trim();
+
+    if (reply) {
+      return {
+        reply,
+        provider: `OpenRouter (${model})`
+      };
+    }
+
+    errors.push(`${model}: empty response`);
   }
 
-  const data = await response.json();
-  const reply = String(data?.choices?.[0]?.message?.content || "").trim();
-
-  if (!reply) {
-    throw new Error("OpenRouter returned an empty response.");
-  }
-
-  return {
-    reply,
-    provider: "OpenRouter"
-  };
+  throw new Error(`OpenRouter failed: ${errors.join(" | ")}`);
 }
 
 async function tryOpenAIResponse(prompt) {
@@ -318,4 +326,20 @@ async function safeReadText(response) {
   } catch {
     return "";
   }
+}
+
+function getOpenRouterModels_() {
+  const configured = String(process.env.OPENROUTER_MODEL || "").trim();
+  if (configured) {
+    return configured
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  return [
+    "meta-llama/llama-3.1-8b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "google/gemma-2-9b-it:free"
+  ];
 }

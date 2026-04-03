@@ -42,7 +42,7 @@ There is also a `GET /api/health` endpoint that helps verify whether the server 
 The chat backend now tries providers in this order:
 
 1. Gemini
-2. OpenRouter
+2. OpenRouter free model chain
 3. Groq
 4. OpenAI
 
@@ -51,7 +51,7 @@ If all live providers fail, the front end still falls back to demo mode automati
 For the most budget-friendly setup, a good starting combo is:
 
 - Gemini as primary
-- OpenRouter free model as fallback
+- OpenRouter free-model chain as fallback
 - optional OpenAI as a third backup
 
 ## CRM dashboard
@@ -86,7 +86,7 @@ This project now expects a Node.js environment for the live AI backend.
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` with default `gemini-3-flash-preview`
 - `OPENROUTER_API_KEY`
-- `OPENROUTER_MODEL` with default `meta-llama/llama-3.1-8b-instruct:free`
+- `OPENROUTER_MODEL` with comma-separated free fallbacks, default `meta-llama/llama-3.1-8b-instruct:free,mistralai/mistral-7b-instruct:free,google/gemma-2-9b-it:free`
 - `GROQ_API_KEY`
 - `GROQ_MODEL` with default `llama-3.1-8b-instant`
 - `OPENAI_API_KEY`
