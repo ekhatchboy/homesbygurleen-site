@@ -66,17 +66,26 @@ function backupMasterLeads() {
 }
 
 function backupMasterLeadsDaily() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const dateStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
-  const backupName = `Master Leads Backup ${dateStamp}`;
-  const existingSheet = spreadsheet.getSheetByName(backupName);
+  return syncRollingMasterLeadsBackup_();
+}
 
-  if (existingSheet) {
-    return backupName;
+function syncRollingMasterLeadsBackup_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = getMasterLeadSheet_();
+  const backupName = "Master Leads Backup";
+  let backupSheet = spreadsheet.getSheetByName(backupName);
+
+  if (!backupSheet) {
+    backupSheet = spreadsheet.insertSheet(backupName);
+  } else {
+    backupSheet.clearContents();
+    backupSheet.clearFormats();
+    const existingFilter = backupSheet.getFilter();
+    if (existingFilter) {
+      existingFilter.remove();
+    }
   }
 
-  const sourceSheet = getMasterLeadSheet_();
-  const backupSheet = spreadsheet.insertSheet(backupName);
   const sourceRange = sourceSheet.getDataRange();
   const values = sourceRange.getValues();
 
