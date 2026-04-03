@@ -380,7 +380,13 @@ async function saveLead(leadId, formData) {
     }
 
     elements.statusText.textContent = "Lead saved successfully.";
-    await loadLeads();
+    if (result.lead && result.lead["Lead ID"]) {
+      upsertLeadInState(result.lead);
+      applyFilters();
+      void refreshLeadsInBackground();
+    } else {
+      await loadLeads();
+    }
   } catch (error) {
     elements.statusText.textContent = error.message || "Unable to save lead.";
   } finally {
@@ -795,7 +801,13 @@ async function saveLeadPatch(payload) {
     }
 
     elements.statusText.textContent = "Quick action saved.";
-    await loadLeads();
+    if (result.lead && result.lead["Lead ID"]) {
+      upsertLeadInState(result.lead);
+      applyFilters();
+      void refreshLeadsInBackground();
+    } else {
+      await loadLeads();
+    }
   } catch (error) {
     elements.statusText.textContent = error.message || "Unable to save quick action.";
   } finally {
@@ -883,4 +895,39 @@ function addDaysToDate(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
+}
+
+function upsertLeadInState(updatedLead) {
+  const leadId = updatedLead?.["Lead ID"];
+  if (!leadId) {
+    return;
+  }
+
+  const index = state.leads.findIndex((lead) => lead["Lead ID"] === leadId);
+  if (index === -1) {
+    state.leads = [updatedLead, ...state.leads];
+  } else {
+    state.leads[index] = updatedLead;
+    state.leads = [...state.leads];
+  }
+
+  state.selectedLeadId = leadId;
+}
+
+async function refreshLeadsInBackground() {
+  try {
+    const response = await fetch(`/crm/leads?ts=${Date.now()}`, {
+      cache: "no-store"
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok || !Array.isArray(payload.leads)) {
+      return;
+    }
+
+    state.leads = payload.leads;
+    applyFilters();
+  } catch {
+    // Keep the optimistic local update if the background refresh fails.
+  }
 }
