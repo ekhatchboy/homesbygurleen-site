@@ -97,7 +97,7 @@
             </div>
             <span class="instagram-pill">Lifestyle + real estate</span>
           </div>
-          <div class="instagram-grid" id="instagramGrid"></div>
+          <div class="instagram-grid instagram-embed-grid" id="instagramGrid"></div>
           <p class="instagram-note">A curated preview keeps the page elegant while still giving visitors a visual reason to click through.</p>
         </div>
       </section>
@@ -150,41 +150,35 @@
   <script>
     const instagramPosts = [
       {
-        url: "https://www.instagram.com/homesbygurleen/p/DWPHHIRCY1s/",
-        label: "Featured Post",
-        title: "Market updates and polished listing moments.",
-        tone: "warm"
+        url: "https://www.instagram.com/homesbygurleen/p/DWPHHIRCY1s/"
       },
       {
-        url: "https://www.instagram.com/homesbygurleen/p/DVNX9kPDiFv/",
-        label: "Homes By Gurleen",
-        title: "A refined look at the lifestyle behind the brand.",
-        tone: "soft"
+        url: "https://www.instagram.com/homesbygurleen/p/DVNX9kPDiFv/"
       },
       {
-        url: "https://www.instagram.com/homesbygurleen/reel/DV6yRExkpwB/",
-        label: "Featured Reel",
-        title: "Short-form walkthrough energy with a local real estate feel.",
-        tone: "deep"
+        url: "https://www.instagram.com/homesbygurleen/reel/DV6yRExkpwB/"
       }
     ];
 
     const shuffledPosts = [...instagramPosts].sort(() => Math.random() - 0.5);
-    const [featuredPost, ...supportingPosts] = shuffledPosts;
     const instagramGrid = document.getElementById("instagramGrid");
 
-    if (instagramGrid && featuredPost) {
-      instagramGrid.innerHTML = `
-        <a class="instagram-tile instagram-tile-feature is-${featuredPost.tone}" href="${featuredPost.url}" target="_blank" rel="noopener noreferrer">
-          <span>${featuredPost.label}</span>
-          <strong>${featuredPost.title}</strong>
-        </a>
-        ${supportingPosts.map((post) => `
-          <a class="instagram-tile is-${post.tone}" href="${post.url}" target="_blank" rel="noopener noreferrer">
-            <span>${post.label}</span>
-          </a>
-        `).join("")}
-      `;
+    if (instagramGrid) {
+      instagramGrid.innerHTML = shuffledPosts.map((post, index) => `
+        <div class="instagram-embed-shell${index === 0 ? " is-featured" : ""}">
+          <blockquote class="instagram-media" data-instgrm-permalink="${post.url}?utm_source=ig_embed&amp;utm_campaign=loading" data-instgrm-version="14"></blockquote>
+        </div>
+      `).join("");
+
+      const existingScript = document.querySelector('script[src="https://www.instagram.com/embed.js"]');
+      if (!existingScript) {
+        const embedScript = document.createElement("script");
+        embedScript.async = true;
+        embedScript.src = "https://www.instagram.com/embed.js";
+        document.body.appendChild(embedScript);
+      } else if (window.instgrm?.Embeds?.process) {
+        window.instgrm.Embeds.process();
+      }
     }
   </script>
 </body>
