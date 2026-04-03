@@ -1,13 +1,13 @@
 # Realtor AI Agent Starter
 
-This project is now a simple realtor website plus a live Google Gemini-ready backend for the Homes By Gurleen assistant. It also includes a private CRM dashboard that can run on Cloudflare Pages while using Google Sheets as the database.
+This project is now a simple realtor website plus a live multi-provider AI backend for the Homes By Gurleen assistant. It also includes a private CRM dashboard that can run on Cloudflare Pages while using Google Sheets as the database.
 
 ## What is included
 
 - A polished landing page in `index.html`
 - A responsive design in `styles.css`
 - A chat assistant UI in `script.js`
-- A serverless Gemini backend in `api/chat.js`
+- A serverless multi-provider AI backend in `api/chat.js`
 - A health check endpoint in `api/health.js`
 - A Cloudflare-ready CRM dashboard in `crm.html`, `crm.css`, and `crm.js`
 - Cloudflare Pages Functions in `functions/crm/`
@@ -35,7 +35,24 @@ The site now includes a backend endpoint:
 }
 ```
 
-There is also a `GET /api/health` endpoint that helps verify whether the server is up and whether `GEMINI_API_KEY` is present.
+There is also a `GET /api/health` endpoint that helps verify whether the server is up and which AI provider keys are present.
+
+## Multi-provider AI fallback
+
+The chat backend now tries providers in this order:
+
+1. Gemini
+2. OpenRouter
+3. Groq
+4. OpenAI
+
+If all live providers fail, the front end still falls back to demo mode automatically.
+
+For the most budget-friendly setup, a good starting combo is:
+
+- Gemini as primary
+- OpenRouter free model as fallback
+- optional OpenAI as a third backup
 
 ## CRM dashboard
 
@@ -55,12 +72,12 @@ The CRM is designed to feel more like a mini HubSpot pipeline while still using 
 
 ## Local development
 
-This project now expects a Node.js environment for the live Gemini backend.
+This project now expects a Node.js environment for the live AI backend.
 
 1. Install Node.js 20 or newer.
 2. Run `npm install`
 3. Copy `.env.example` to `.env.local`
-4. Add your real Gemini API key to `.env.local`
+4. Add your real AI provider key or keys to `.env.local`
 5. Run `npm run dev`
 6. Open the local Vercel URL and test the assistant
 
@@ -68,6 +85,13 @@ This project now expects a Node.js environment for the live Gemini backend.
 
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` with default `gemini-3-flash-preview`
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL` with default `meta-llama/llama-3.1-8b-instruct:free`
+- `GROQ_API_KEY`
+- `GROQ_MODEL` with default `llama-3.1-8b-instant`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` with default `gpt-4.1-mini`
+- `APP_BASE_URL`
 - `BRAND_NAME`
 - `REALTOR_NAME`
 - `MARKET_NAME`
@@ -83,7 +107,7 @@ Because the domain is with GoDaddy, the simplest setup is:
 
 1. Keep the domain in GoDaddy.
 2. Host the project on Vercel.
-3. Add `GEMINI_API_KEY` and optional `GEMINI_MODEL` in Vercel project settings.
+3. Add at least one AI provider key in Vercel project settings.
 4. Point the GoDaddy domain DNS to Vercel.
 5. Store the Gemini API key only on the backend, never in browser JavaScript.
 

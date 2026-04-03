@@ -6,7 +6,8 @@ const quickActions = document.querySelectorAll(".quick-action");
 
 const config = {
   mode: "live-preferred",
-  apiEndpoint: "/api/chat"
+  apiEndpoint: "/api/chat",
+  leadEndpoint: "/api/lead"
 };
 
 const leadProfile = {
@@ -18,6 +19,8 @@ const leadProfile = {
 };
 
 let fallbackStep = 0;
+let lastForwardedLeadKey = "";
+let liveReplyCount = 0;
 
 const transcript = [
   {
@@ -31,17 +34,17 @@ const demoReplies = [
   {
     test: (text) => !leadProfile.intent && /\b(buy|buying|buyer|purchase|house hunt|looking to buy)\b/i.test(text),
     reply:
-      "Great. What area are you hoping to buy in?"
+      "Great. To point you the right way, what area are you hoping to buy in, what timeline are you working with, and what's the best email or phone number for follow-up?"
   },
   {
     test: (text) => !leadProfile.intent && /\b(sell|selling|seller|listing|home valuation|value my home)\b/i.test(text),
     reply:
-      "Absolutely. What city is the home in?"
+      "Absolutely. What city is the home in, how soon are you thinking of moving, and what's the best email or phone number for follow-up?"
   },
   {
     test: (text) => !leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text),
     reply:
-      "Of course. What area or city is the referral looking in?"
+      "Of course. What area are they looking in, what timeline do they have, and what's the best contact info for follow-up?"
   },
   {
     test: (text) => !leadProfile.timeline && /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
@@ -78,7 +81,7 @@ chatForm.addEventListener("submit", async (event) => {
   transcript.push({ role: "user", content: message });
   chatInput.value = "";
 
-  if (config.mode !== "demo") {
+  if (config.mode !== "demo" && shouldUseLiveAI(message)) {
     const handledLive = await sendToLiveAgent(message);
     if (handledLive) {
       return;
@@ -98,6 +101,7 @@ chatForm.addEventListener("submit", async (event) => {
     const reply = getDemoReply(message);
     appendMessage("assistant", reply);
     transcript.push({ role: "assistant", content: reply });
+    void maybeForwardLead(message);
   }, 450);
 });
 
@@ -222,6 +226,36 @@ function updateLeadProfile(text) {
   }
 }
 
+function shouldUseLiveAI(message) {
+  const normalized = String(message || "").trim();
+  if (!normalized) {
+    return false;
+  }
+
+  const wordCount = normalized.split(/\s+/).length;
+  const looksLikeQuestion = /[?]|\b(can|could|do|does|is|are|what|when|where|why|how|which|who)\b/i.test(normalized);
+  const alreadyQualified = Boolean(
+    leadProfile.intent &&
+    leadProfile.area &&
+    leadProfile.timeline &&
+    leadProfile.contact
+  );
+
+  if (liveReplyCount === 0) {
+    return true;
+  }
+
+  if (looksLikeQuestion || wordCount >= 16) {
+    return true;
+  }
+
+  if (alreadyQualified) {
+    return true;
+  }
+
+  return false;
+}
+
 async function sendToLiveAgent(message) {
   try {
     setAssistantStatus("Connecting...");
@@ -242,13 +276,64 @@ async function sendToLiveAgent(message) {
     }
 
     const data = await response.json();
-    setAssistantStatus("Live AI");
+    setAssistantStatus(data.provider ? `${data.provider} Live` : "Live AI");
     const reply = data.reply || "I'm here and ready to help.";
     appendMessage("assistant", reply);
     transcript.push({ role: "assistant", content: reply });
+    liveReplyCount += 1;
+    markLeadForwarded();
     return true;
   } catch (error) {
     return false;
+  }
+}
+
+async function maybeForwardLead(message) {
+  const forwardKey = getLeadForwardKey();
+
+  if (!forwardKey || forwardKey === lastForwardedLeadKey) {
+    return;
+  }
+
+  try {
+    const response = await fetch(config.leadEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message,
+        leadProfile,
+        transcript
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Lead forwarding failed.");
+    }
+
+    lastForwardedLeadKey = forwardKey;
+    setAssistantStatus("Lead Captured");
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function getLeadForwardKey() {
+  const intent = String(leadProfile.intent || "").trim().toLowerCase();
+  const contact = String(leadProfile.contact || "").trim().toLowerCase();
+
+  if (!intent || !contact) {
+    return "";
+  }
+
+  return `${intent}|${contact}`;
+}
+
+function markLeadForwarded() {
+  const forwardKey = getLeadForwardKey();
+  if (forwardKey) {
+    lastForwardedLeadKey = forwardKey;
   }
 }
 
