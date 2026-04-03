@@ -25,6 +25,7 @@ const elements = {
   heroMetricDue: document.querySelector('[data-hero-metric="due"]'),
   openLeadModalButton: document.querySelector("#openLeadModalButton"),
   leadModal: document.querySelector("#leadModal"),
+  closeLeadModalButton: document.querySelector("#closeLeadModalButton"),
   createLeadForm: document.querySelector("#createLeadForm"),
   createLeadSubmitButton: document.querySelector("#createLeadSubmitButton")
 };
@@ -44,6 +45,7 @@ function initialize() {
   });
   elements.refreshButton?.addEventListener("click", loadLeads);
   elements.openLeadModalButton?.addEventListener("click", openLeadModal);
+  elements.closeLeadModalButton?.addEventListener("click", closeLeadModal);
   document.querySelectorAll("[data-close-lead-modal]").forEach((button) => {
     button.addEventListener("click", closeLeadModal);
   });
