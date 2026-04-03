@@ -720,6 +720,29 @@ body.site-background::after {
   gap: 12px;
 }
 
+.crm-action-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.crm-action-select {
+  width: 100%;
+  border: 1px solid rgba(138, 75, 58, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+  padding: 13px 14px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.crm-action-select:focus {
+  outline: none;
+  border-color: rgba(138, 75, 58, 0.32);
+  box-shadow: 0 0 0 4px rgba(138, 75, 58, 0.08);
+}
+
 .crm-action-button {
   border: 1px solid rgba(64, 38, 26, 0.1);
   border-radius: 18px;

@@ -231,7 +231,15 @@ function renderSelectedLead() {
       </div>
       <div class="crm-action-grid">
         <button type="button" class="crm-action-button" data-quick-action="contactedToday">Mark Contacted Today</button>
-        <button type="button" class="crm-action-button" data-quick-action="push2">Push Follow-Up 2 Days</button>
+        <div class="crm-action-combo">
+          <select class="crm-action-select" id="followUpDelaySelect" aria-label="Choose follow-up delay">
+            <option value="2">Push by 2 Days</option>
+            <option value="7">Push by 1 Week</option>
+            <option value="14">Push by 2 Weeks</option>
+            <option value="30">Push by 1 Month</option>
+          </select>
+          <button type="button" class="crm-action-button" data-quick-action="pushFollowUp">Update Follow-Up</button>
+        </div>
         <button type="button" class="crm-action-button" data-quick-action="setWarm">Set as Warm</button>
         <button type="button" class="crm-action-button" data-quick-action="copyMessage">Copy Follow-Up Text</button>
       </div>
@@ -739,9 +747,11 @@ async function handleQuickAction(lead, action) {
     payload["Lead Status"] = lead["Lead Status"] === "Closed" ? "Closed" : "Active";
   }
 
-  if (action === "push2") {
+  if (action === "pushFollowUp") {
+    const delaySelect = document.querySelector("#followUpDelaySelect");
+    const delayDays = Number(delaySelect?.value || 2);
     const baseDate = lead["Next Follow-Up Date"] ? new Date(lead["Next Follow-Up Date"]) : new Date();
-    payload["Next Follow-Up Date"] = toIsoDate(addDaysToDate(baseDate, 2));
+    payload["Next Follow-Up Date"] = toIsoDate(addDaysToDate(baseDate, delayDays));
   }
 
   if (action === "setWarm") {
