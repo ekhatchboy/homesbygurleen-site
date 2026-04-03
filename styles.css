@@ -715,31 +715,6 @@ body::before {
   gap: 12px;
 }
 
-.instagram-embed-grid {
-  grid-auto-rows: auto;
-  align-items: start;
-}
-
-.instagram-embed-shell {
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 24px;
-  border: 1px solid rgba(77, 50, 32, 0.08);
-  background: rgba(255, 252, 247, 0.78);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
-  padding: 10px;
-}
-
-.instagram-embed-shell.is-featured {
-  grid-column: span 2;
-}
-
-.instagram-embed-shell .instagram-media {
-  margin: 0 auto !important;
-  min-width: 100% !important;
-  width: 100% !important;
-}
-
 .instagram-tile {
   position: relative;
   text-decoration: none;
@@ -755,6 +730,60 @@ body::before {
   align-items: end;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.instagram-tile-visual {
+  position: relative;
+  min-height: 128px;
+  margin: -2px -2px 18px;
+  border-radius: 20px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
+    linear-gradient(135deg, rgba(138, 75, 58, 0.22), rgba(181, 138, 82, 0.1)),
+    linear-gradient(180deg, rgba(243, 231, 220, 0.94), rgba(214, 196, 180, 0.92));
+  overflow: hidden;
+}
+
+.instagram-tile-visual::before,
+.instagram-tile-visual::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.instagram-tile-visual::before {
+  width: 160px;
+  height: 160px;
+  right: -24px;
+  bottom: -42px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 66%);
+}
+
+.instagram-tile-visual::after {
+  width: 120px;
+  height: 120px;
+  left: -10px;
+  top: -14px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 70%);
+}
+
+.instagram-play {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 247, 0.88);
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 18px rgba(71, 42, 27, 0.08);
 }
 
 .instagram-tile:hover {
@@ -1018,7 +1047,7 @@ body::before {
     font-size: clamp(2.7rem, 12vw, 4.4rem);
   }
 
-  .instagram-embed-shell.is-featured {
+  .instagram-tile-feature {
     grid-column: auto;
   }
 }
