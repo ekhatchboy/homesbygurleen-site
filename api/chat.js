@@ -314,7 +314,8 @@ async function forwardLead(payload) {
         source: "website-ai-agent",
         sentAt: new Date().toISOString(),
         webhookSecret: businessConfig.webhookSecret,
-        ...payload
+        ...payload,
+        transcript: buildLeadSummaryTranscript_(payload.leadProfile, payload.transcript, payload.reply)
       })
     });
   } catch (error) {
@@ -343,5 +344,37 @@ function getOpenRouterModels_() {
     "meta-llama/llama-3.1-8b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
     "google/gemma-2-9b-it:free"
+  ];
+}
+
+function buildLeadSummaryTranscript_(leadProfile, transcript, reply) {
+  const lines = [];
+
+  if (leadProfile?.name) lines.push(`Name: ${leadProfile.name}`);
+  if (leadProfile?.intent) lines.push(`Intent: ${leadProfile.intent}`);
+  if (leadProfile?.area) lines.push(`Area: ${leadProfile.area}`);
+  if (leadProfile?.timeline) lines.push(`Timeline: ${leadProfile.timeline}`);
+  if (leadProfile?.budget) lines.push(`Budget: ${leadProfile.budget}`);
+  if (leadProfile?.phone) lines.push(`Phone: ${leadProfile.phone}`);
+  if (leadProfile?.email) lines.push(`Email: ${leadProfile.email}`);
+  if (leadProfile?.contact) lines.push(`Best contact: ${leadProfile.contact}`);
+
+  const latestUserMessage = Array.isArray(transcript)
+    ? [...transcript].reverse().find((entry) => entry?.role === "user" && String(entry.content || "").trim())
+    : null;
+
+  if (latestUserMessage) {
+    lines.push(`Latest note: ${String(latestUserMessage.content).trim()}`);
+  }
+
+  if (reply) {
+    lines.push(`Suggested next step: ${String(reply).trim()}`);
+  }
+
+  return [
+    {
+      role: "summary",
+      content: lines.join("\n")
+    }
   ];
 }

@@ -45,7 +45,7 @@ export default async function handler(request, response) {
         webhookSecret: businessConfig.webhookSecret,
         message,
         leadProfile,
-        transcript,
+        transcript: buildLeadSummaryTranscript_(leadProfile, transcript),
         businessConfig
       })
     });
@@ -80,4 +80,32 @@ async function safeReadText(response) {
   } catch {
     return "";
   }
+}
+
+function buildLeadSummaryTranscript_(leadProfile, transcript) {
+  const lines = [];
+
+  if (leadProfile.name) lines.push(`Name: ${leadProfile.name}`);
+  if (leadProfile.intent) lines.push(`Intent: ${leadProfile.intent}`);
+  if (leadProfile.area) lines.push(`Area: ${leadProfile.area}`);
+  if (leadProfile.timeline) lines.push(`Timeline: ${leadProfile.timeline}`);
+  if (leadProfile.budget) lines.push(`Budget: ${leadProfile.budget}`);
+  if (leadProfile.phone) lines.push(`Phone: ${leadProfile.phone}`);
+  if (leadProfile.email) lines.push(`Email: ${leadProfile.email}`);
+  if (leadProfile.contact) lines.push(`Best contact: ${leadProfile.contact}`);
+
+  const latestUserMessage = Array.isArray(transcript)
+    ? [...transcript].reverse().find((entry) => entry?.role === "user" && String(entry.content || "").trim())
+    : null;
+
+  if (latestUserMessage) {
+    lines.push(`Latest note: ${String(latestUserMessage.content).trim()}`);
+  }
+
+  return [
+    {
+      role: "summary",
+      content: lines.join("\n")
+    }
+  ];
 }
