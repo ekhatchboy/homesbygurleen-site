@@ -141,6 +141,7 @@ function doPost(e) {
     if (action === "updateLead") {
       authorizeCrm_(e, payload);
       setupSheets();
+      backupMasterLeadsDaily();
 
       return jsonResponse_({
         ok: true,
