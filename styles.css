@@ -456,7 +456,8 @@ body::before {
 }
 
 .assistant-section,
-.contact-section {
+.contact-section,
+.instagram-showcase {
   margin-top: 32px;
 }
 
@@ -643,6 +644,134 @@ body::before {
   padding: 18px 0 24px;
 }
 
+.instagram-showcase {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+
+.instagram-copy,
+.instagram-card {
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--surface);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+
+.instagram-copy {
+  padding: 32px;
+}
+
+.instagram-copy h2 {
+  margin: 0 0 16px;
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(2.2rem, 4.8vw, 3.5rem);
+  line-height: 0.98;
+}
+
+.instagram-card {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 245, 0.96), rgba(236, 225, 211, 0.92)),
+    radial-gradient(circle at top right, rgba(181, 138, 82, 0.12), transparent 28%);
+}
+
+.instagram-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.instagram-card-head strong {
+  display: block;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.85rem;
+}
+
+.instagram-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(138, 75, 58, 0.1);
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.instagram-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 132px;
+  gap: 12px;
+}
+
+.instagram-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(77, 50, 32, 0.08);
+  background:
+    linear-gradient(160deg, rgba(81, 66, 58, 0.18), rgba(181, 138, 82, 0.04)),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.34), transparent 45%),
+    linear-gradient(180deg, rgba(255, 252, 247, 0.8), rgba(230, 217, 203, 0.88));
+  padding: 18px;
+  display: flex;
+  align-items: end;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.instagram-tile::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -20% auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(181, 138, 82, 0.18), transparent 68%);
+  pointer-events: none;
+}
+
+.instagram-tile span {
+  position: relative;
+  z-index: 1;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.instagram-tile-feature {
+  grid-column: span 2;
+  grid-row: span 2;
+  align-items: end;
+}
+
+.instagram-tile-feature strong {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: 12ch;
+  margin-top: 10px;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 2.2rem;
+  line-height: 0.96;
+}
+
+.instagram-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 .contact-card {
   padding: 24px;
   display: grid;
@@ -818,6 +947,7 @@ body::before {
   .hero,
   .assistant-layout,
   .contact-section,
+  .instagram-showcase,
   .value-strip,
   .pathways,
   .journey-hero,
