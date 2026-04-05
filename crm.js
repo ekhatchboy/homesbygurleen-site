@@ -280,6 +280,8 @@ function renderSelectedLead() {
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
       ${renderSelect("Lead Status", ["New", "Active", "Warm", "No Answer", "Closed"], lead["Lead Status"] || "New")}
       ${renderSelect("Signed Contract", ["", "Yes", "No"], lead["Signed Contract"] || "")}
+      ${renderInput("Contract Signed Date", lead["Contract Signed Date"], "date")}
+      ${renderInput("Contract Expiration Date", lead["Contract Expiration Date"], "date")}
       ${renderInput("Last Contact Date", lead["Last Contact Date"], "date")}
       ${renderInput("Next Follow-Up Date", lead["Next Follow-Up Date"], "date")}
       ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C"], lead["Follow-Up Rank"] || "Rank A")}

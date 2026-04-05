@@ -25,7 +25,9 @@ const MASTER_HEADER_ROW = [
   "Follow-Up Rank",
   "Text Status",
   "Assigned Message",
-  "Signed Contract"
+  "Signed Contract",
+  "Contract Signed Date",
+  "Contract Expiration Date"
 ];
 
 function setupSheets() {
@@ -68,6 +70,59 @@ function backupMasterLeads() {
 
 function backupMasterLeadsDaily() {
   return syncRollingMasterLeadsBackup_();
+}
+
+function restoreMasterLeadsFromBackup() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = spreadsheet.getSheetByName("Master Leads Backup");
+
+  if (!sourceSheet) {
+    throw new Error('Sheet not found: Master Leads Backup');
+  }
+
+  backupMasterLeads();
+
+  const targetSheet = getMasterLeadSheet_();
+  const sourceRange = sourceSheet.getDataRange();
+  const values = sourceRange.getValues();
+  const sourceLastRow = sourceSheet.getLastRow();
+  const sourceLastColumn = sourceSheet.getLastColumn();
+  const targetFilter = targetSheet.getFilter();
+
+  if (targetFilter) {
+    targetFilter.remove();
+  }
+
+  targetSheet.clearContents();
+  targetSheet.clearFormats();
+
+  if (targetSheet.getMaxRows() > sourceLastRow) {
+    targetSheet.deleteRows(sourceLastRow + 1, targetSheet.getMaxRows() - sourceLastRow);
+  } else if (targetSheet.getMaxRows() < sourceLastRow) {
+    targetSheet.insertRowsAfter(targetSheet.getMaxRows(), sourceLastRow - targetSheet.getMaxRows());
+  }
+
+  if (targetSheet.getMaxColumns() > sourceLastColumn) {
+    targetSheet.deleteColumns(sourceLastColumn + 1, targetSheet.getMaxColumns() - sourceLastColumn);
+  } else if (targetSheet.getMaxColumns() < sourceLastColumn) {
+    targetSheet.insertColumnsAfter(targetSheet.getMaxColumns(), sourceLastColumn - targetSheet.getMaxColumns());
+  }
+
+  if (values.length && values[0].length) {
+    targetSheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+    sourceSheet.getRange(1, 1, sourceLastRow, sourceLastColumn).copyFormatToRange(targetSheet, 1, sourceLastColumn, 1, sourceLastRow);
+  }
+
+  targetSheet.setFrozenRows(sourceSheet.getFrozenRows());
+  targetSheet.setFrozenColumns(sourceSheet.getFrozenColumns());
+  copySheetDimensions_(sourceSheet, targetSheet, sourceLastRow, sourceLastColumn);
+
+  if (sourceSheet.getFilter() && sourceLastRow > 1) {
+    targetSheet.getRange(1, 1, sourceLastRow, sourceLastColumn).createFilter();
+  }
+
+  formatMasterLeadSheet_(targetSheet);
+  return "Master Leads restored from backup.";
 }
 
 function syncRollingMasterLeadsBackup_() {
@@ -209,7 +264,9 @@ function doPost(e) {
       "Follow-Up Rank": "Rank A",
       "Text Status": "Pending Review",
       "Assigned Message": buildAssignedMessage_(leadType),
-      "Signed Contract": ""
+      "Signed Contract": "",
+      "Contract Signed Date": "",
+      "Contract Expiration Date": ""
     });
 
     formatMasterLeadSheet_(sheet);
@@ -258,6 +315,8 @@ function onFormSubmit(e) {
     "Text Status": "Pending Review",
     "Assigned Message": buildAssignedMessage_(leadType),
     "Signed Contract": "",
+    "Contract Signed Date": "",
+    "Contract Expiration Date": "",
     "_buyingArea": buyingArea,
     "_sellingLocation": sellingLocation
   });
@@ -534,6 +593,8 @@ function backfillFormResponsesBySheetName_(sheetName) {
       "Text Status": "Pending Review",
       "Assigned Message": buildAssignedMessage_(leadType),
       "Signed Contract": "",
+      "Contract Signed Date": "",
+      "Contract Expiration Date": "",
       "_buyingArea": buyingArea,
       "_sellingLocation": sellingLocation
     });
@@ -587,7 +648,9 @@ function upsertLead_(sheet, leadData) {
     "Business Email": leadData["Business Email"] || match["Business Email"],
     "Transcript / Raw Responses": mergeTextValues_(match["Transcript / Raw Responses"], leadData["Transcript / Raw Responses"], "\n\n---\n\n"),
     "Assigned Message": buildAssignedMessage_(nextLeadType),
-    "Signed Contract": leadData["Signed Contract"] || match["Signed Contract"]
+    "Signed Contract": leadData["Signed Contract"] || match["Signed Contract"],
+    "Contract Signed Date": leadData["Contract Signed Date"] || match["Contract Signed Date"],
+    "Contract Expiration Date": leadData["Contract Expiration Date"] || match["Contract Expiration Date"]
   };
 
   MASTER_HEADER_ROW.forEach((header, index) => {
@@ -1075,7 +1138,9 @@ function handleLeadUpdate_(payload) {
     "Follow-Up Rank",
     "Text Status",
     "Assigned Message",
-    "Signed Contract"
+    "Signed Contract",
+    "Contract Signed Date",
+    "Contract Expiration Date"
   ];
 
   writableFields.forEach((field) => {
@@ -1120,6 +1185,8 @@ function handleLeadCreate_(payload) {
   const textStatus = String(payload["Text Status"] || "Pending Review").trim();
   const assignedMessage = String(payload["Assigned Message"] || "").trim() || buildAssignedMessage_(leadType);
   const signedContract = String(payload["Signed Contract"] || "").trim();
+  const contractSignedDate = normalizeIncomingDate_(payload["Contract Signed Date"]);
+  const contractExpirationDate = normalizeIncomingDate_(payload["Contract Expiration Date"]);
   const source = String(payload["Source"] || "Manual CRM Entry").trim();
 
   const row = MASTER_HEADER_ROW.map((header) => {
@@ -1174,6 +1241,10 @@ function handleLeadCreate_(payload) {
         return assignedMessage;
       case "Signed Contract":
         return signedContract;
+      case "Contract Signed Date":
+        return contractSignedDate;
+      case "Contract Expiration Date":
+        return contractExpirationDate;
       default:
         return "";
     }
