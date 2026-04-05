@@ -976,6 +976,23 @@ body::before {
   line-height: 0.95;
 }
 
+.contact-portrait {
+  overflow: hidden;
+  margin: -6px 0 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(77, 50, 32, 0.08);
+  min-height: 420px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.contact-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
 .journey-panel h2 {
   margin: 0 0 16px;
   font-family: "Cormorant Garamond", serif;
