@@ -336,9 +336,10 @@ function renderPipelineBoard() {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
       const dueState = getDueState(lead["Next Follow-Up Date"]);
       const displayName = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "Unnamed lead";
+      const toneClass = getPipelineToneClass(lead, dueState);
 
       return `
-        <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
+        <button type="button" class="crm-pipeline-lead ${toneClass}${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
           <strong>${escapeHtml(displayName)}</strong>
           <span>${escapeHtml(lead["Lead Type"] || "Lead")}</span>
           ${renderPill(dueState.label, dueState.className)}
@@ -542,14 +543,14 @@ function comparePipelinePriority(a, b) {
     return duePriority;
   }
 
-  const rankPriority = getRankPriorityValue(a["Follow-Up Rank"]) - getRankPriorityValue(b["Follow-Up Rank"]);
-  if (rankPriority !== 0) {
-    return rankPriority;
-  }
-
   const nextFollowUpPriority = getFollowUpTimestamp(a["Next Follow-Up Date"]) - getFollowUpTimestamp(b["Next Follow-Up Date"]);
   if (nextFollowUpPriority !== 0) {
     return nextFollowUpPriority;
+  }
+
+  const rankPriority = getRankPriorityValue(a["Follow-Up Rank"]) - getRankPriorityValue(b["Follow-Up Rank"]);
+  if (rankPriority !== 0) {
+    return rankPriority;
   }
 
   return String(a["Name"] || a["Email"] || "").localeCompare(String(b["Name"] || b["Email"] || ""));
@@ -601,6 +602,23 @@ function getFollowUpTimestamp(value) {
   }
 
   return toDateOnly(date).getTime();
+}
+
+function getPipelineToneClass(lead, dueState) {
+  if (dueState.className === "is-overdue") {
+    return "is-overdue";
+  }
+
+  if (dueState.className === "is-today") {
+    return "is-today";
+  }
+
+  if (dueState.className === "is-tomorrow") {
+    return "is-tomorrow";
+  }
+
+  const status = String(lead["Lead Status"] || "").trim().toLowerCase().replace(/\s+/g, "-");
+  return status ? `is-${status}` : "";
 }
 
 function toDateOnly(date) {

@@ -396,6 +396,41 @@ body::after {
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
+.crm-pipeline-lead.is-new {
+  background: rgba(217, 234, 247, 0.72);
+}
+
+.crm-pipeline-lead.is-active {
+  background: rgba(147, 255, 147, 0.28);
+}
+
+.crm-pipeline-lead.is-warm {
+  background: rgba(252, 229, 205, 0.68);
+}
+
+.crm-pipeline-lead.is-no-answer {
+  background: rgba(245, 217, 221, 0.72);
+}
+
+.crm-pipeline-lead.is-closed {
+  background: rgba(230, 230, 230, 0.72);
+}
+
+.crm-pipeline-lead.is-overdue {
+  background: rgba(224, 102, 102, 0.18);
+  border-color: rgba(224, 102, 102, 0.38);
+}
+
+.crm-pipeline-lead.is-today {
+  background: rgba(244, 204, 204, 0.58);
+  border-color: rgba(180, 96, 96, 0.28);
+}
+
+.crm-pipeline-lead.is-tomorrow {
+  background: rgba(255, 242, 204, 0.8);
+  border-color: rgba(179, 154, 84, 0.26);
+}
+
 .crm-pipeline-lead:hover,
 .crm-pipeline-lead.is-selected {
   transform: translateY(-1px);
