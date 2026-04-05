@@ -72,7 +72,8 @@ body.site-background::after {
 }
 
 .crm-copy h1 {
-  max-width: 26ch;
+  line-height: 1.08;
+  max-width: 32ch;
 }
 
 .hero-text {

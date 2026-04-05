@@ -158,8 +158,8 @@ body::after {
 .crm-copy h1 {
   margin: 0 0 14px;
   font-size: clamp(2.25rem, 4.5vw, 3.7rem);
-  line-height: 0.98;
-  max-width: 26ch;
+  line-height: 1.08;
+  max-width: 32ch;
   text-wrap: balance;
 }
 
