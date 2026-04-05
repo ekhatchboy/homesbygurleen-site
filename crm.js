@@ -123,6 +123,8 @@ function applyFilters() {
     return true;
   });
 
+  state.filteredLeads.sort(comparePipelinePriority);
+
   if (!state.filteredLeads.some((lead) => lead["Lead ID"] === state.selectedLeadId)) {
     state.selectedLeadId = state.filteredLeads[0]?.["Lead ID"] || "";
   }
@@ -329,9 +331,7 @@ function renderPipelineBoard() {
   const statuses = ["New", "Active", "Warm", "No Answer", "Closed"];
 
   elements.pipelineBoard.innerHTML = statuses.map((status) => {
-    const leads = state.filteredLeads
-      .filter((lead) => lead["Lead Status"] === status)
-      .sort(comparePipelinePriority);
+    const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
     const leadMarkup = leads.map((lead) => {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
       const dueState = getDueState(lead["Next Follow-Up Date"]);
