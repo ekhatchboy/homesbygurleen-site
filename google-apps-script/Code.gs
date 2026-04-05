@@ -76,67 +76,6 @@ function backupMasterLeadsDaily() {
   return syncRollingMasterLeadsBackup_();
 }
 
-function repairLendingColumnAlignment() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAME);
-
-  if (!sheet) {
-    throw new Error(`Sheet not found: ${MASTER_SHEET_NAME}`);
-  }
-
-  backupMasterLeads();
-
-  const lastRow = sheet.getLastRow();
-  const headerLength = MASTER_HEADER_ROW.length;
-
-  if (lastRow < 2) {
-    ensureMasterHeaders_(sheet);
-    formatMasterLeadSheet_(sheet);
-    return "No lead rows needed repair.";
-  }
-
-  const lendingColumn = MASTER_HEADER_ROW.indexOf("Lending") + 1;
-  const assignedMessageColumn = MASTER_HEADER_ROW.indexOf("Assigned Message") + 1;
-
-  if (!lendingColumn || !assignedMessageColumn || lendingColumn >= assignedMessageColumn) {
-    throw new Error("Lending/Assigned Message column layout is invalid.");
-  }
-
-  const dataRange = sheet.getRange(2, 1, lastRow - 1, headerLength);
-  const rows = dataRange.getValues();
-  let repairedCount = 0;
-
-  const repairedRows = rows.map((row) => {
-    const lendingValue = String(row[lendingColumn - 1] || "").trim();
-    const assignedValue = String(row[assignedMessageColumn - 1] || "").trim();
-    const buyerContractValue = String(row[assignedMessageColumn] || "").trim();
-    const looksShifted =
-      lendingValue &&
-      !assignedValue &&
-      (buyerContractValue === "" || buyerContractValue === "Yes" || buyerContractValue === "No");
-
-    if (!looksShifted) {
-      return row;
-    }
-
-    const nextRow = row.slice();
-    for (let index = headerLength - 1; index >= assignedMessageColumn; index -= 1) {
-      nextRow[index] = nextRow[index - 1];
-    }
-    nextRow[lendingColumn - 1] = "";
-    repairedCount += 1;
-    return nextRow;
-  });
-
-  dataRange.setValues(repairedRows);
-  ensureMasterHeaders_(sheet);
-  formatMasterLeadSheet_(sheet);
-
-  return repairedCount
-    ? `Repaired ${repairedCount} lead row${repairedCount === 1 ? "" : "s"} after the Lending column shift.`
-    : "No shifted Lending rows were detected.";
-}
-
 function restoreMasterLeadsFromBackup() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const sourceSheet = spreadsheet.getSheetByName("Master Leads Backup");
@@ -424,8 +363,6 @@ function getMasterLeadSheet_() {
   }
 
   ensureMasterHeaders_(sheet);
-
-  formatMasterLeadSheet_(sheet);
   return sheet;
 }
 
@@ -1217,13 +1154,13 @@ function handleLeadUpdate_(payload) {
     }
   });
 
-  formatMasterLeadSheet_(sheet);
-  const record = getLeadRecords_().find((entry) => entry["Lead ID"] === leadId);
-  return record || {};
+  applyLeadRowValidations_(sheet, rowNumber);
+  return getLeadRecordByRow_(sheet, rowNumber, headers);
 }
 
 function handleLeadCreate_(payload) {
   const sheet = getMasterLeadSheet_();
+  const headers = sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).getValues()[0];
   const leadType = normalizeLeadType_(payload["Lead Type"] || "Buyer");
   const newLeadId = createLeadId_();
   const nextFollowUpDate = normalizeIncomingDate_(payload["Next Follow-Up Date"]) || formatDate_(addDays_(new Date(), 2));
@@ -1321,9 +1258,9 @@ function handleLeadCreate_(payload) {
   });
 
   sheet.appendRow(row);
-  formatMasterLeadSheet_(sheet);
-  const record = getLeadRecords_().find((entry) => entry["Lead ID"] === newLeadId);
-  return record || {};
+  const rowNumber = sheet.getLastRow();
+  applyLeadRowValidations_(sheet, rowNumber);
+  return getLeadRecordByRow_(sheet, rowNumber, headers);
 }
 
 function normalizeIncomingDate_(value) {
@@ -1403,6 +1340,73 @@ function applyDropdowns_(sheet) {
   sheet.getRange(2, 24, maxRows, 1).setDataValidation(lendingRule);
   sheet.getRange(2, 26, maxRows, 1).setDataValidation(contractRule);
   sheet.getRange(2, 29, maxRows, 1).setDataValidation(contractRule);
+}
+
+function applyLeadRowValidations_(sheet, rowNumber) {
+  if (!sheet || rowNumber < 2) {
+    return;
+  }
+
+  const leadTypeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const consentRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["Yes", "No"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["New", "Active", "Warm", "No Answer", "Closed"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const rankRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["Rank A", "Rank B", "Rank C"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const textStatusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["Pending Review", "Ready", "Sent", "Skipped"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const lendingRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["", "In Progress", "Pre-Approved", "Not Needed"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const contractRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["", "Yes", "No"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  sheet.getRange(rowNumber, 3).setDataValidation(leadTypeRule);
+  sheet.getRange(rowNumber, 18).setDataValidation(consentRule);
+  sheet.getRange(rowNumber, 19).setDataValidation(statusRule);
+  sheet.getRange(rowNumber, 22).setDataValidation(rankRule);
+  sheet.getRange(rowNumber, 23).setDataValidation(textStatusRule);
+  sheet.getRange(rowNumber, 24).setDataValidation(lendingRule);
+  sheet.getRange(rowNumber, 26).setDataValidation(contractRule);
+  sheet.getRange(rowNumber, 29).setDataValidation(contractRule);
+}
+
+function getLeadRecordByRow_(sheet, rowNumber, headers) {
+  if (!sheet || rowNumber < 2) {
+    return {};
+  }
+
+  const effectiveHeaders = headers || sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).getValues()[0];
+  const row = sheet.getRange(rowNumber, 1, 1, effectiveHeaders.length).getValues()[0];
+  const record = {};
+
+  effectiveHeaders.forEach((header, index) => {
+    record[header] = row[index] || "";
+  });
+
+  record._rowNumber = rowNumber;
+  return record;
 }
 
 function applyStatusFormatting_(sheet) {
