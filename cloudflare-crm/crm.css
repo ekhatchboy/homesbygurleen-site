@@ -600,7 +600,8 @@ body::after {
   color: #7a2d2d;
 }
 
-.crm-pill.is-upcoming {
+.crm-pill.is-upcoming,
+.crm-pill.is-tomorrow {
   background: #fff2cc;
   color: #6b5a1f;
 }
@@ -726,7 +727,8 @@ body::after {
   background: #d38849;
 }
 
-.crm-timeline-marker.is-upcoming {
+.crm-timeline-marker.is-upcoming,
+.crm-timeline-marker.is-tomorrow {
   background: #7b91d8;
 }
 
