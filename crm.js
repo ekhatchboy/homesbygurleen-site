@@ -176,7 +176,7 @@ function renderLeadList() {
           ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
           ${renderContractPills(lead)}
           ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
-          ${renderPipelineDuePill(dueState, lead)}
+            ${renderPill(dueState.label, dueState.className)}
         </div>
       </button>
     `;
