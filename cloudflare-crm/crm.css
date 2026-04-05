@@ -575,6 +575,12 @@ body::after {
   color: #6b5a1f;
 }
 
+.crm-pill.is-contract {
+  background: #c94848;
+  color: #fff7f4;
+  box-shadow: 0 10px 18px rgba(131, 35, 35, 0.18);
+}
+
 .crm-detail-card {
   min-height: 780px;
   padding: 28px;

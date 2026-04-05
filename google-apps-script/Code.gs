@@ -24,7 +24,8 @@ const MASTER_HEADER_ROW = [
   "Next Follow-Up Date",
   "Follow-Up Rank",
   "Text Status",
-  "Assigned Message"
+  "Assigned Message",
+  "Signed Contract"
 ];
 
 function setupSheets() {
@@ -207,7 +208,8 @@ function doPost(e) {
       "Next Follow-Up Date": formatDate_(addDays_(new Date(), 2)),
       "Follow-Up Rank": "Rank A",
       "Text Status": "Pending Review",
-      "Assigned Message": buildAssignedMessage_(leadType)
+      "Assigned Message": buildAssignedMessage_(leadType),
+      "Signed Contract": ""
     });
 
     formatMasterLeadSheet_(sheet);
@@ -255,6 +257,7 @@ function onFormSubmit(e) {
     "Follow-Up Rank": "Rank A",
     "Text Status": "Pending Review",
     "Assigned Message": buildAssignedMessage_(leadType),
+    "Signed Contract": "",
     "_buyingArea": buyingArea,
     "_sellingLocation": sellingLocation
   });
@@ -389,12 +392,14 @@ function ensureGuideSheet_() {
     ["New", "Brand new lead that just came in."],
     ["Active", "Currently in conversation or being worked."],
     ["Warm", "Interested lead but not urgent right now."],
+    ["No Answer", "Outreach has gone out, but there has not been a response yet."],
     ["Closed", "No further follow-up needed."],
     ["", ""],
     ["Lead Status Colors", "Meaning"],
     ["New", "Light blue"],
     ["Active", "Bright green"],
     ["Warm", "Light peach"],
+    ["No Answer", "Soft rose"],
     ["Closed", "Light gray"],
     ["", ""],
     ["Follow-Up Rank", "Meaning"],
@@ -528,6 +533,7 @@ function backfillFormResponsesBySheetName_(sheetName) {
       "Follow-Up Rank": "Rank A",
       "Text Status": "Pending Review",
       "Assigned Message": buildAssignedMessage_(leadType),
+      "Signed Contract": "",
       "_buyingArea": buyingArea,
       "_sellingLocation": sellingLocation
     });
@@ -580,7 +586,8 @@ function upsertLead_(sheet, leadData) {
     "Market": leadData["Market"] || match["Market"],
     "Business Email": leadData["Business Email"] || match["Business Email"],
     "Transcript / Raw Responses": mergeTextValues_(match["Transcript / Raw Responses"], leadData["Transcript / Raw Responses"], "\n\n---\n\n"),
-    "Assigned Message": buildAssignedMessage_(nextLeadType)
+    "Assigned Message": buildAssignedMessage_(nextLeadType),
+    "Signed Contract": leadData["Signed Contract"] || match["Signed Contract"]
   };
 
   MASTER_HEADER_ROW.forEach((header, index) => {
@@ -1067,7 +1074,8 @@ function handleLeadUpdate_(payload) {
     "Next Follow-Up Date",
     "Follow-Up Rank",
     "Text Status",
-    "Assigned Message"
+    "Assigned Message",
+    "Signed Contract"
   ];
 
   writableFields.forEach((field) => {
@@ -1111,6 +1119,7 @@ function handleLeadCreate_(payload) {
   const rank = String(payload["Follow-Up Rank"] || "Rank A").trim();
   const textStatus = String(payload["Text Status"] || "Pending Review").trim();
   const assignedMessage = String(payload["Assigned Message"] || "").trim() || buildAssignedMessage_(leadType);
+  const signedContract = String(payload["Signed Contract"] || "").trim();
   const source = String(payload["Source"] || "Manual CRM Entry").trim();
 
   const row = MASTER_HEADER_ROW.map((header) => {
@@ -1163,6 +1172,8 @@ function handleLeadCreate_(payload) {
         return textStatus;
       case "Assigned Message":
         return assignedMessage;
+      case "Signed Contract":
+        return signedContract;
       default:
         return "";
     }
@@ -1219,7 +1230,7 @@ function applyDropdowns_(sheet) {
     .build();
 
   const statusRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["New", "Active", "Warm", "Closed"], true)
+    .requireValueInList(["New", "Active", "Warm", "No Answer", "Closed"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1233,11 +1244,17 @@ function applyDropdowns_(sheet) {
     .setAllowInvalid(false)
     .build();
 
+  const contractRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["", "Yes", "No"], true)
+    .setAllowInvalid(false)
+    .build();
+
   sheet.getRange(2, 3, maxRows, 1).setDataValidation(leadTypeRule);
   sheet.getRange(2, 18, maxRows, 1).setDataValidation(consentRule);
   sheet.getRange(2, 19, maxRows, 1).setDataValidation(statusRule);
   sheet.getRange(2, 22, maxRows, 1).setDataValidation(rankRule);
   sheet.getRange(2, 23, maxRows, 1).setDataValidation(textStatusRule);
+  sheet.getRange(2, 25, maxRows, 1).setDataValidation(contractRule);
 }
 
 function applyStatusFormatting_(sheet) {
@@ -1258,6 +1275,12 @@ function applyStatusFormatting_(sheet) {
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo("Warm")
       .setBackground("#fce5cd")
+      .setRanges([sheet.getRange(2, 19, lastRow - 1, 1)])
+      .build()
+    ,
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo("No Answer")
+      .setBackground("#f4d7d7")
       .setRanges([sheet.getRange(2, 19, lastRow - 1, 1)])
       .build()
     ,

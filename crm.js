@@ -172,6 +172,7 @@ function renderLeadList() {
         <div class="crm-lead-subtitle">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")}</div>
         <div class="crm-lead-meta">
           ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
+          ${lead["Signed Contract"] === "Yes" ? renderPill("Contract", "is-contract") : ""}
           ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
           ${renderPill(dueState.label, dueState.className)}
         </div>
@@ -208,6 +209,7 @@ function renderSelectedLead() {
       </div>
       <div class="crm-lead-meta">
         ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
+        ${lead["Signed Contract"] === "Yes" ? renderPill("Contract", "is-contract") : ""}
         ${renderPill(lead["Text Status"] || "Pending Review")}
         ${renderPill(dueState.label, dueState.className)}
       </div>
@@ -276,7 +278,8 @@ function renderSelectedLead() {
       ${renderInput("Timeline", lead["Timeline"])}
       ${renderInput("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "")}
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
-      ${renderSelect("Lead Status", ["New", "Active", "Warm", "Closed"], lead["Lead Status"] || "New")}
+      ${renderSelect("Lead Status", ["New", "Active", "Warm", "No Answer", "Closed"], lead["Lead Status"] || "New")}
+      ${renderSelect("Signed Contract", ["", "Yes", "No"], lead["Signed Contract"] || "")}
       ${renderInput("Last Contact Date", lead["Last Contact Date"], "date")}
       ${renderInput("Next Follow-Up Date", lead["Next Follow-Up Date"], "date")}
       ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C"], lead["Follow-Up Rank"] || "Rank A")}
@@ -317,7 +320,7 @@ function renderPipelineBoard() {
     return;
   }
 
-  const statuses = ["New", "Active", "Warm", "Closed"];
+  const statuses = ["New", "Active", "Warm", "No Answer", "Closed"];
 
   elements.pipelineBoard.innerHTML = statuses.map((status) => {
     const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
