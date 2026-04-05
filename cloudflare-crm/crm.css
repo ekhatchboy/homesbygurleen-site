@@ -139,6 +139,19 @@ body::after {
   font-weight: 700;
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-logo {
+  width: 86px;
+  height: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
 .topbar-note {
   color: var(--muted);
   font-size: 0.95rem;
@@ -1009,6 +1022,10 @@ body::after {
   .crm-status-mini-grid {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .brand-lockup {
+    justify-content: flex-start;
   }
 
   .crm-card-actions {
