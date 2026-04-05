@@ -687,6 +687,7 @@ function buildSmartSummary(lead) {
   const dueState = getDueState(lead["Next Follow-Up Date"]);
   const status = cleanValue(lead["Lead Status"]);
   const rank = cleanValue(lead["Follow-Up Rank"]);
+  const lending = cleanValue(lead["Lending"]);
 
   if (leadType) {
     parts.push(`${withArticle_(leadType)} lead`);
@@ -714,6 +715,10 @@ function buildSmartSummary(lead) {
 
   if (source) {
     parts.push(`came in through ${source}`);
+  }
+
+  if (lending) {
+    parts.push(`lending status: ${lending.toLowerCase()}`);
   }
 
   if (status) {
