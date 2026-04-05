@@ -329,7 +329,9 @@ function renderPipelineBoard() {
   const statuses = ["New", "Active", "Warm", "No Answer", "Closed"];
 
   elements.pipelineBoard.innerHTML = statuses.map((status) => {
-    const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
+    const leads = state.filteredLeads
+      .filter((lead) => lead["Lead Status"] === status)
+      .sort(comparePipelinePriority);
     const leadMarkup = leads.map((lead) => {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
       const dueState = getDueState(lead["Next Follow-Up Date"]);
@@ -532,6 +534,73 @@ function getDueState(dateValue) {
   }
 
   return { label: `Due ${formatShortDate(dateValue)}`, className: "" };
+}
+
+function comparePipelinePriority(a, b) {
+  const duePriority = getDuePriorityValue(a) - getDuePriorityValue(b);
+  if (duePriority !== 0) {
+    return duePriority;
+  }
+
+  const rankPriority = getRankPriorityValue(a["Follow-Up Rank"]) - getRankPriorityValue(b["Follow-Up Rank"]);
+  if (rankPriority !== 0) {
+    return rankPriority;
+  }
+
+  const nextFollowUpPriority = getFollowUpTimestamp(a["Next Follow-Up Date"]) - getFollowUpTimestamp(b["Next Follow-Up Date"]);
+  if (nextFollowUpPriority !== 0) {
+    return nextFollowUpPriority;
+  }
+
+  return String(a["Name"] || a["Email"] || "").localeCompare(String(b["Name"] || b["Email"] || ""));
+}
+
+function getDuePriorityValue(lead) {
+  const dueClass = getDueState(lead["Next Follow-Up Date"]).className;
+
+  if (dueClass === "is-overdue") {
+    return 0;
+  }
+
+  if (dueClass === "is-today") {
+    return 1;
+  }
+
+  if (dueClass === "is-tomorrow") {
+    return 2;
+  }
+
+  if (lead["Next Follow-Up Date"]) {
+    return 3;
+  }
+
+  return 4;
+}
+
+function getRankPriorityValue(rank) {
+  switch (String(rank || "").trim()) {
+    case "Rank A":
+      return 0;
+    case "Rank B":
+      return 1;
+    case "Rank C":
+      return 2;
+    default:
+      return 3;
+  }
+}
+
+function getFollowUpTimestamp(value) {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return toDateOnly(date).getTime();
 }
 
 function toDateOnly(date) {
