@@ -413,6 +413,22 @@ body::after {
   font-size: 0.9rem;
 }
 
+.crm-pipeline-lead .crm-pill.is-overdue {
+  background: #e06666;
+  color: #fff;
+}
+
+.crm-pipeline-lead .crm-pill.is-today {
+  background: #f4cccc;
+  color: #7a2d2d;
+}
+
+.crm-pipeline-lead .crm-pill.is-upcoming,
+.crm-pipeline-lead .crm-pill.is-tomorrow {
+  background: #fff2cc;
+  color: #6b5a1f;
+}
+
 .crm-pipeline-empty {
   padding: 20px 14px;
   border: 1px dashed rgba(64, 38, 26, 0.14);
