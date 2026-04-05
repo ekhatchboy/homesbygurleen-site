@@ -203,7 +203,6 @@ body::before {
 
 .hero,
 .assistant-layout,
-.market-grid,
 .contact-section,
 .value-strip {
   display: grid;
@@ -460,82 +459,6 @@ body::before {
 .contact-section,
 .instagram-showcase {
   margin-top: 32px;
-}
-
-.market-authority {
-  margin: 24px 0 8px;
-}
-
-.market-heading {
-  margin-bottom: 22px;
-}
-
-.market-grid {
-  grid-template-columns: 1.15fr 1fr 1fr;
-  align-items: stretch;
-}
-
-.market-card {
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  background: var(--surface);
-  backdrop-filter: blur(10px);
-  box-shadow: var(--shadow);
-  padding: 26px;
-}
-
-.market-card span {
-  display: inline-flex;
-  margin-bottom: 12px;
-  color: var(--gold);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.market-card h3 {
-  margin: 0 0 12px;
-  font-family: "Cormorant Garamond", serif;
-  font-size: 2rem;
-  line-height: 0.98;
-}
-
-.market-card p,
-.market-list li {
-  color: var(--muted);
-  line-height: 1.65;
-}
-
-.market-card-primary {
-  grid-row: span 2;
-  background:
-    linear-gradient(180deg, rgba(255, 251, 245, 0.96), rgba(236, 225, 211, 0.92)),
-    radial-gradient(circle at top right, rgba(181, 138, 82, 0.12), transparent 30%);
-}
-
-.market-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 12px;
-}
-
-.market-list li {
-  position: relative;
-  padding-left: 18px;
-}
-
-.market-list li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 11px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 
 .section-heading {
@@ -1123,7 +1046,6 @@ body::before {
 @media (max-width: 960px) {
   .hero,
   .assistant-layout,
-  .market-grid,
   .contact-section,
   .instagram-showcase,
   .value-strip,
