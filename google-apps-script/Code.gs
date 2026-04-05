@@ -76,6 +76,67 @@ function backupMasterLeadsDaily() {
   return syncRollingMasterLeadsBackup_();
 }
 
+function repairLendingColumnAlignment() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadsheet.getSheetByName(MASTER_SHEET_NAME);
+
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${MASTER_SHEET_NAME}`);
+  }
+
+  backupMasterLeads();
+
+  const lastRow = sheet.getLastRow();
+  const headerLength = MASTER_HEADER_ROW.length;
+
+  if (lastRow < 2) {
+    ensureMasterHeaders_(sheet);
+    formatMasterLeadSheet_(sheet);
+    return "No lead rows needed repair.";
+  }
+
+  const lendingColumn = MASTER_HEADER_ROW.indexOf("Lending") + 1;
+  const assignedMessageColumn = MASTER_HEADER_ROW.indexOf("Assigned Message") + 1;
+
+  if (!lendingColumn || !assignedMessageColumn || lendingColumn >= assignedMessageColumn) {
+    throw new Error("Lending/Assigned Message column layout is invalid.");
+  }
+
+  const dataRange = sheet.getRange(2, 1, lastRow - 1, headerLength);
+  const rows = dataRange.getValues();
+  let repairedCount = 0;
+
+  const repairedRows = rows.map((row) => {
+    const lendingValue = String(row[lendingColumn - 1] || "").trim();
+    const assignedValue = String(row[assignedMessageColumn - 1] || "").trim();
+    const buyerContractValue = String(row[assignedMessageColumn] || "").trim();
+    const looksShifted =
+      lendingValue &&
+      !assignedValue &&
+      (buyerContractValue === "" || buyerContractValue === "Yes" || buyerContractValue === "No");
+
+    if (!looksShifted) {
+      return row;
+    }
+
+    const nextRow = row.slice();
+    for (let index = headerLength - 1; index >= assignedMessageColumn; index -= 1) {
+      nextRow[index] = nextRow[index - 1];
+    }
+    nextRow[lendingColumn - 1] = "";
+    repairedCount += 1;
+    return nextRow;
+  });
+
+  dataRange.setValues(repairedRows);
+  ensureMasterHeaders_(sheet);
+  formatMasterLeadSheet_(sheet);
+
+  return repairedCount
+    ? `Repaired ${repairedCount} lead row${repairedCount === 1 ? "" : "s"} after the Lending column shift.`
+    : "No shifted Lending rows were detected.";
+}
+
 function restoreMasterLeadsFromBackup() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   const sourceSheet = spreadsheet.getSheetByName("Master Leads Backup");
