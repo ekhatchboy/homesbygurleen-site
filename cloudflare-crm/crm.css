@@ -159,7 +159,7 @@ body::after {
   margin: 0 0 14px;
   font-size: clamp(2.25rem, 4.5vw, 3.7rem);
   line-height: 0.98;
-  max-width: 13.5ch;
+  max-width: 20ch;
   text-wrap: balance;
 }
 
