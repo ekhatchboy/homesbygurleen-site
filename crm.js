@@ -366,6 +366,7 @@ function renderPipelineBoard() {
       renderLeadList();
       renderPipelineBoard();
       renderSelectedLead();
+      elements.detailCard?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 
