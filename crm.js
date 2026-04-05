@@ -176,7 +176,7 @@ function renderLeadList() {
           ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
           ${renderContractPills(lead)}
           ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
-          ${renderPill(dueState.label, dueState.className)}
+          ${renderPipelineDuePill(dueState)}
         </div>
       </button>
     `;
@@ -336,12 +336,16 @@ function renderPipelineBoard() {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
       const dueState = getDueState(lead["Next Follow-Up Date"]);
       const displayName = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "Unnamed lead";
+      const statusClass = getPipelineStatusClass(lead["Lead Status"]);
 
       return `
-        <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
+        <button type="button" class="crm-pipeline-lead ${statusClass}${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
           <strong>${escapeHtml(displayName)}</strong>
           <span>${escapeHtml(lead["Lead Type"] || "Lead")}</span>
-          ${renderPill(dueState.label, dueState.className)}
+          <div class="crm-pipeline-meta-row">
+            ${renderPipelineStatusBadge(lead["Lead Status"])}
+            ${renderPipelineDuePill(dueState)}
+          </div>
         </button>
       `;
     }).join("");
@@ -641,6 +645,28 @@ function renderPill(text, className = "") {
   }
 
   return `<span class="crm-pill ${className}">${escapeHtml(text)}</span>`;
+}
+
+function renderPipelineDuePill(dueState) {
+  if (!dueState?.label) {
+    return "";
+  }
+
+  return `<span class="crm-pill crm-pipeline-due-pill ${escapeHtml(dueState.className || "")}">${escapeHtml(dueState.label)}</span>`;
+}
+
+function renderPipelineStatusBadge(status) {
+  if (!status) {
+    return "";
+  }
+
+  const normalized = String(status).trim().toLowerCase().replace(/\s+/g, "-");
+  return `<span class="crm-pipeline-status-badge is-${escapeHtml(normalized)}">${escapeHtml(status)}</span>`;
+}
+
+function getPipelineStatusClass(status) {
+  const normalized = String(status || "").trim().toLowerCase().replace(/\s+/g, "-");
+  return normalized ? `status-${normalized}` : "";
 }
 
 function renderContractPills(lead) {

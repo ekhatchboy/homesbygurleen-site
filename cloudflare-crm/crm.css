@@ -394,6 +394,37 @@ body::after {
   text-align: left;
   cursor: pointer;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.crm-pipeline-lead::before {
+  content: "";
+  position: absolute;
+  inset: 10px auto 10px 0;
+  width: 4px;
+  border-radius: 999px;
+  background: rgba(138, 75, 58, 0.18);
+}
+
+.crm-pipeline-lead.status-new::before {
+  background: #9ec7e6;
+}
+
+.crm-pipeline-lead.status-active::before {
+  background: #68c768;
+}
+
+.crm-pipeline-lead.status-warm::before {
+  background: #dfb27c;
+}
+
+.crm-pipeline-lead.status-no-answer::before {
+  background: #d3a0ad;
+}
+
+.crm-pipeline-lead.status-closed::before {
+  background: #b7b7b7;
 }
 
 
@@ -413,18 +444,63 @@ body::after {
   font-size: 0.9rem;
 }
 
-.crm-pipeline-lead .crm-pill.is-overdue {
+.crm-pipeline-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crm-pipeline-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(36, 27, 24, 0.06);
+  color: #5f514b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.crm-pipeline-status-badge.is-new {
+  background: rgba(217, 234, 247, 0.9);
+  color: #355166;
+}
+
+.crm-pipeline-status-badge.is-active {
+  background: rgba(147, 255, 147, 0.45);
+  color: #184a18;
+}
+
+.crm-pipeline-status-badge.is-warm {
+  background: rgba(252, 229, 205, 0.9);
+  color: #6e4a23;
+}
+
+.crm-pipeline-status-badge.is-no-answer {
+  background: rgba(245, 217, 221, 0.88);
+  color: #6f4250;
+}
+
+.crm-pipeline-status-badge.is-closed {
+  background: rgba(230, 230, 230, 0.95);
+  color: #555;
+}
+
+.crm-pipeline-due-pill.is-overdue {
   background: #e06666;
   color: #fff;
 }
 
-.crm-pipeline-lead .crm-pill.is-today {
+.crm-pipeline-due-pill.is-today {
   background: #f4cccc;
   color: #7a2d2d;
 }
 
-.crm-pipeline-lead .crm-pill.is-upcoming,
-.crm-pipeline-lead .crm-pill.is-tomorrow {
+.crm-pipeline-due-pill.is-upcoming,
+.crm-pipeline-due-pill.is-tomorrow {
   background: #fff2cc;
   color: #6b5a1f;
 }
