@@ -227,7 +227,7 @@ function renderSelectedLead() {
       ${renderSnapshotCard("Follow-Up Rank", lead["Follow-Up Rank"] || "Rank A")}
       ${renderSnapshotCard("Last Contact", lead["Last Contact Date"] ? formatLongDate(lead["Last Contact Date"]) : "Not logged")}
       ${renderSnapshotCard("Next Follow-Up", lead["Next Follow-Up Date"] ? formatLongDate(lead["Next Follow-Up Date"]) : "Not set")}
-      ${renderSnapshotCard("Consent to Text", lead["Consent to Text"] || "Not set")}
+      ${renderSnapshotCard("Lending Status", lead["Lending"] || "Not set")}
     </div>
 
     <div class="crm-detail-grid">
