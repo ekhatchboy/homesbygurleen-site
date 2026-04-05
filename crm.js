@@ -330,7 +330,7 @@ function renderPipelineBoard() {
 
   elements.pipelineBoard.innerHTML = statuses.map((status) => {
     const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
-    const leadMarkup = leads.slice(0, 6).map((lead) => {
+    const leadMarkup = leads.map((lead) => {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
       const dueState = getDueState(lead["Next Follow-Up Date"]);
       const displayName = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "Unnamed lead";

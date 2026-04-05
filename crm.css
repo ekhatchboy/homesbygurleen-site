@@ -280,6 +280,23 @@ body.site-background::after {
 .crm-pipeline-stack {
   display: grid;
   gap: 10px;
+  max-height: 1020px;
+  overflow-y: auto;
+  padding-right: 6px;
+  align-content: start;
+}
+
+.crm-pipeline-stack::-webkit-scrollbar {
+  width: 8px;
+}
+
+.crm-pipeline-stack::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(138, 75, 58, 0.22);
+}
+
+.crm-pipeline-stack::-webkit-scrollbar-track {
+  background: rgba(138, 75, 58, 0.06);
 }
 
 .crm-pipeline-lead {
