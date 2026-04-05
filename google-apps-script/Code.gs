@@ -86,46 +86,19 @@ function restoreMasterLeadsFromBackup() {
 
   backupMasterLeads();
 
-  const targetSheet = getMasterLeadSheet_();
-  const sourceRange = sourceSheet.getDataRange();
-  const values = sourceRange.getValues();
-  const sourceLastRow = sourceSheet.getLastRow();
-  const sourceLastColumn = sourceSheet.getLastColumn();
-  const targetFilter = targetSheet.getFilter();
+  const targetSheet = spreadsheet.getSheetByName(MASTER_SHEET_NAME);
+  const targetIndex = targetSheet ? targetSheet.getIndex() : spreadsheet.getNumSheets();
+  const restoredSheet = sourceSheet.copyTo(spreadsheet);
 
-  if (targetFilter) {
-    targetFilter.remove();
+  restoredSheet.setName(`Master Leads Restore Temp ${Date.now()}`);
+  spreadsheet.setActiveSheet(restoredSheet);
+  spreadsheet.moveActiveSheet(targetIndex);
+
+  if (targetSheet) {
+    spreadsheet.deleteSheet(targetSheet);
   }
 
-  targetSheet.clearContents();
-  targetSheet.clearFormats();
-
-  if (targetSheet.getMaxRows() > sourceLastRow) {
-    targetSheet.deleteRows(sourceLastRow + 1, targetSheet.getMaxRows() - sourceLastRow);
-  } else if (targetSheet.getMaxRows() < sourceLastRow) {
-    targetSheet.insertRowsAfter(targetSheet.getMaxRows(), sourceLastRow - targetSheet.getMaxRows());
-  }
-
-  if (targetSheet.getMaxColumns() > sourceLastColumn) {
-    targetSheet.deleteColumns(sourceLastColumn + 1, targetSheet.getMaxColumns() - sourceLastColumn);
-  } else if (targetSheet.getMaxColumns() < sourceLastColumn) {
-    targetSheet.insertColumnsAfter(targetSheet.getMaxColumns(), sourceLastColumn - targetSheet.getMaxColumns());
-  }
-
-  if (values.length && values[0].length) {
-    targetSheet.getRange(1, 1, values.length, values[0].length).setValues(values);
-    sourceSheet.getRange(1, 1, sourceLastRow, sourceLastColumn).copyFormatToRange(targetSheet, 1, sourceLastColumn, 1, sourceLastRow);
-  }
-
-  targetSheet.setFrozenRows(sourceSheet.getFrozenRows());
-  targetSheet.setFrozenColumns(sourceSheet.getFrozenColumns());
-  copySheetDimensions_(sourceSheet, targetSheet, sourceLastRow, sourceLastColumn);
-
-  if (sourceSheet.getFilter() && sourceLastRow > 1) {
-    targetSheet.getRange(1, 1, sourceLastRow, sourceLastColumn).createFilter();
-  }
-
-  formatMasterLeadSheet_(targetSheet);
+  restoredSheet.setName(MASTER_SHEET_NAME);
   return "Master Leads restored from backup.";
 }
 
