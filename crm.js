@@ -341,7 +341,7 @@ function renderPipelineBoard() {
         <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
           <strong>${escapeHtml(displayName)}</strong>
           <span>${escapeHtml(lead["Lead Type"] || "Lead")}</span>
-          ${renderPipelineDuePill(dueState)}
+          ${renderPipelineDuePill(dueState, lead)}
         </button>
       `;
     }).join("");

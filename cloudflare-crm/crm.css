@@ -429,6 +429,31 @@ body::after {
   color: #6b5a1f;
 }
 
+.crm-pipeline-due-pill.is-new {
+  background: #d9eaf7;
+  color: #355166;
+}
+
+.crm-pipeline-due-pill.is-active {
+  background: #93ff93;
+  color: #184a18;
+}
+
+.crm-pipeline-due-pill.is-warm {
+  background: #fce5cd;
+  color: #6e4a23;
+}
+
+.crm-pipeline-due-pill.is-no-answer {
+  background: #f6d7de;
+  color: #7f3950;
+}
+
+.crm-pipeline-due-pill.is-closed {
+  background: #e6e6e6;
+  color: #555;
+}
+
 .crm-pipeline-empty {
   padding: 20px 14px;
   border: 1px dashed rgba(64, 38, 26, 0.14);
