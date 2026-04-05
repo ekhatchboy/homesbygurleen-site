@@ -89,8 +89,8 @@ body::before {
 }
 
 .brand-logo {
-  width: 70px;
-  height: 70px;
+  width: 86px;
+  height: 86px;
   object-fit: contain;
   filter: drop-shadow(0 6px 18px rgba(86, 58, 33, 0.12));
 }
@@ -1097,8 +1097,8 @@ body::before {
   }
 
   .brand-logo {
-    width: 58px;
-    height: 58px;
+    width: 72px;
+    height: 72px;
   }
 
   .message {
