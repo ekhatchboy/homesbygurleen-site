@@ -530,7 +530,7 @@ function getDueState(dateValue) {
   }
 
   if (diffDays === 1) {
-    return { label: "Due tomorrow", className: "is-upcoming" };
+    return { label: "Due tomorrow", className: "is-tomorrow" };
   }
 
   return { label: `Due ${formatShortDate(dateValue)}`, className: "" };
