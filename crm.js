@@ -172,7 +172,7 @@ function renderLeadList() {
         <div class="crm-lead-subtitle">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")}</div>
         <div class="crm-lead-meta">
           ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
-          ${lead["Signed Contract"] === "Yes" ? renderPill("Contract", "is-contract") : ""}
+          ${renderContractPills(lead)}
           ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
           ${renderPill(dueState.label, dueState.className)}
         </div>
@@ -209,7 +209,7 @@ function renderSelectedLead() {
       </div>
       <div class="crm-lead-meta">
         ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
-        ${lead["Signed Contract"] === "Yes" ? renderPill("Contract", "is-contract") : ""}
+        ${renderContractPills(lead)}
         ${renderPill(lead["Text Status"] || "Pending Review")}
         ${renderPill(dueState.label, dueState.className)}
       </div>
@@ -279,13 +279,17 @@ function renderSelectedLead() {
       ${renderInput("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "")}
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
       ${renderSelect("Lead Status", ["New", "Active", "Warm", "No Answer", "Closed"], lead["Lead Status"] || "New")}
-      ${renderSelect("Signed Contract", ["", "Yes", "No"], lead["Signed Contract"] || "")}
-      ${renderInput("Contract Signed Date", lead["Contract Signed Date"], "date")}
-      ${renderInput("Contract Expiration Date", lead["Contract Expiration Date"], "date")}
+      ${renderSelect("Buyer Contract Signed", ["", "Yes", "No"], lead["Buyer Contract Signed"] || "")}
+      ${renderInput("Buyer Contract Signed Date", lead["Buyer Contract Signed Date"], "date")}
+      ${renderInput("Buyer Contract Expiration Date", lead["Buyer Contract Expiration Date"], "date")}
+      ${renderSelect("Seller Contract Signed", ["", "Yes", "No"], lead["Seller Contract Signed"] || "")}
+      ${renderInput("Seller Contract Signed Date", lead["Seller Contract Signed Date"], "date")}
+      ${renderInput("Seller Contract Expiration Date", lead["Seller Contract Expiration Date"], "date")}
       ${renderInput("Last Contact Date", lead["Last Contact Date"], "date")}
       ${renderInput("Next Follow-Up Date", lead["Next Follow-Up Date"], "date")}
       ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C"], lead["Follow-Up Rank"] || "Rank A")}
       ${renderSelect("Text Status", ["Pending Review", "Ready", "Sent", "Skipped"], lead["Text Status"] || "Pending Review")}
+      ${renderSelect("Lending", ["", "In Progress", "Pre-Approved", "Not Needed"], lead["Lending"] || "")}
       ${renderTextarea("Goal / Context", lead["Goal / Context"], true)}
       ${renderTextarea("Latest Message / Notes", lead["Latest Message / Notes"], true)}
       ${renderTextarea("Assigned Message", lead["Assigned Message"], true)}
@@ -566,6 +570,20 @@ function renderPill(text, className = "") {
   }
 
   return `<span class="crm-pill ${className}">${escapeHtml(text)}</span>`;
+}
+
+function renderContractPills(lead) {
+  const pills = [];
+
+  if (lead["Buyer Contract Signed"] === "Yes") {
+    pills.push(renderPill("Buyer Contract", "is-contract"));
+  }
+
+  if (lead["Seller Contract Signed"] === "Yes") {
+    pills.push(renderPill("Seller Contract", "is-contract"));
+  }
+
+  return pills.join("");
 }
 
 function renderDetailItem(label, value) {

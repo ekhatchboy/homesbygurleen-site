@@ -24,10 +24,14 @@ const MASTER_HEADER_ROW = [
   "Next Follow-Up Date",
   "Follow-Up Rank",
   "Text Status",
+  "Lending",
   "Assigned Message",
-  "Signed Contract",
-  "Contract Signed Date",
-  "Contract Expiration Date"
+  "Buyer Contract Signed",
+  "Buyer Contract Signed Date",
+  "Buyer Contract Expiration Date",
+  "Seller Contract Signed",
+  "Seller Contract Signed Date",
+  "Seller Contract Expiration Date"
 ];
 
 function setupSheets() {
@@ -263,10 +267,14 @@ function doPost(e) {
       "Next Follow-Up Date": formatDate_(addDays_(new Date(), 2)),
       "Follow-Up Rank": "Rank A",
       "Text Status": "Pending Review",
+      "Lending": "",
       "Assigned Message": buildAssignedMessage_(leadType),
-      "Signed Contract": "",
-      "Contract Signed Date": "",
-      "Contract Expiration Date": ""
+      "Buyer Contract Signed": "",
+      "Buyer Contract Signed Date": "",
+      "Buyer Contract Expiration Date": "",
+      "Seller Contract Signed": "",
+      "Seller Contract Signed Date": "",
+      "Seller Contract Expiration Date": ""
     });
 
     formatMasterLeadSheet_(sheet);
@@ -313,10 +321,14 @@ function onFormSubmit(e) {
     "Next Follow-Up Date": formatDate_(addDays_(new Date(), 2)),
     "Follow-Up Rank": "Rank A",
     "Text Status": "Pending Review",
+    "Lending": "",
     "Assigned Message": buildAssignedMessage_(leadType),
-    "Signed Contract": "",
-    "Contract Signed Date": "",
-    "Contract Expiration Date": "",
+    "Buyer Contract Signed": "",
+    "Buyer Contract Signed Date": "",
+    "Buyer Contract Expiration Date": "",
+    "Seller Contract Signed": "",
+    "Seller Contract Signed Date": "",
+    "Seller Contract Expiration Date": "",
     "_buyingArea": buyingArea,
     "_sellingLocation": sellingLocation
   });
@@ -591,10 +603,14 @@ function backfillFormResponsesBySheetName_(sheetName) {
       "Next Follow-Up Date": formatDate_(addDays_(new Date(), 2)),
       "Follow-Up Rank": "Rank A",
       "Text Status": "Pending Review",
+      "Lending": "",
       "Assigned Message": buildAssignedMessage_(leadType),
-      "Signed Contract": "",
-      "Contract Signed Date": "",
-      "Contract Expiration Date": "",
+      "Buyer Contract Signed": "",
+      "Buyer Contract Signed Date": "",
+      "Buyer Contract Expiration Date": "",
+      "Seller Contract Signed": "",
+      "Seller Contract Signed Date": "",
+      "Seller Contract Expiration Date": "",
       "_buyingArea": buyingArea,
       "_sellingLocation": sellingLocation
     });
@@ -647,10 +663,14 @@ function upsertLead_(sheet, leadData) {
     "Market": leadData["Market"] || match["Market"],
     "Business Email": leadData["Business Email"] || match["Business Email"],
     "Transcript / Raw Responses": mergeTextValues_(match["Transcript / Raw Responses"], leadData["Transcript / Raw Responses"], "\n\n---\n\n"),
+    "Lending": leadData["Lending"] || match["Lending"],
     "Assigned Message": buildAssignedMessage_(nextLeadType),
-    "Signed Contract": leadData["Signed Contract"] || match["Signed Contract"],
-    "Contract Signed Date": leadData["Contract Signed Date"] || match["Contract Signed Date"],
-    "Contract Expiration Date": leadData["Contract Expiration Date"] || match["Contract Expiration Date"]
+    "Buyer Contract Signed": leadData["Buyer Contract Signed"] || match["Buyer Contract Signed"],
+    "Buyer Contract Signed Date": leadData["Buyer Contract Signed Date"] || match["Buyer Contract Signed Date"],
+    "Buyer Contract Expiration Date": leadData["Buyer Contract Expiration Date"] || match["Buyer Contract Expiration Date"],
+    "Seller Contract Signed": leadData["Seller Contract Signed"] || match["Seller Contract Signed"],
+    "Seller Contract Signed Date": leadData["Seller Contract Signed Date"] || match["Seller Contract Signed Date"],
+    "Seller Contract Expiration Date": leadData["Seller Contract Expiration Date"] || match["Seller Contract Expiration Date"]
   };
 
   MASTER_HEADER_ROW.forEach((header, index) => {
@@ -1137,10 +1157,14 @@ function handleLeadUpdate_(payload) {
     "Next Follow-Up Date",
     "Follow-Up Rank",
     "Text Status",
+    "Lending",
     "Assigned Message",
-    "Signed Contract",
-    "Contract Signed Date",
-    "Contract Expiration Date"
+    "Buyer Contract Signed",
+    "Buyer Contract Signed Date",
+    "Buyer Contract Expiration Date",
+    "Seller Contract Signed",
+    "Seller Contract Signed Date",
+    "Seller Contract Expiration Date"
   ];
 
   writableFields.forEach((field) => {
@@ -1183,10 +1207,14 @@ function handleLeadCreate_(payload) {
   const lastContactDate = normalizeIncomingDate_(payload["Last Contact Date"]);
   const rank = String(payload["Follow-Up Rank"] || "Rank A").trim();
   const textStatus = String(payload["Text Status"] || "Pending Review").trim();
+  const lending = String(payload["Lending"] || "").trim();
   const assignedMessage = String(payload["Assigned Message"] || "").trim() || buildAssignedMessage_(leadType);
-  const signedContract = String(payload["Signed Contract"] || "").trim();
-  const contractSignedDate = normalizeIncomingDate_(payload["Contract Signed Date"]);
-  const contractExpirationDate = normalizeIncomingDate_(payload["Contract Expiration Date"]);
+  const buyerContractSigned = String(payload["Buyer Contract Signed"] || "").trim();
+  const buyerContractSignedDate = normalizeIncomingDate_(payload["Buyer Contract Signed Date"]);
+  const buyerContractExpirationDate = normalizeIncomingDate_(payload["Buyer Contract Expiration Date"]);
+  const sellerContractSigned = String(payload["Seller Contract Signed"] || "").trim();
+  const sellerContractSignedDate = normalizeIncomingDate_(payload["Seller Contract Signed Date"]);
+  const sellerContractExpirationDate = normalizeIncomingDate_(payload["Seller Contract Expiration Date"]);
   const source = String(payload["Source"] || "Manual CRM Entry").trim();
 
   const row = MASTER_HEADER_ROW.map((header) => {
@@ -1237,14 +1265,22 @@ function handleLeadCreate_(payload) {
         return rank;
       case "Text Status":
         return textStatus;
+      case "Lending":
+        return lending;
       case "Assigned Message":
         return assignedMessage;
-      case "Signed Contract":
-        return signedContract;
-      case "Contract Signed Date":
-        return contractSignedDate;
-      case "Contract Expiration Date":
-        return contractExpirationDate;
+      case "Buyer Contract Signed":
+        return buyerContractSigned;
+      case "Buyer Contract Signed Date":
+        return buyerContractSignedDate;
+      case "Buyer Contract Expiration Date":
+        return buyerContractExpirationDate;
+      case "Seller Contract Signed":
+        return sellerContractSigned;
+      case "Seller Contract Signed Date":
+        return sellerContractSignedDate;
+      case "Seller Contract Expiration Date":
+        return sellerContractExpirationDate;
       default:
         return "";
     }
@@ -1315,6 +1351,11 @@ function applyDropdowns_(sheet) {
     .setAllowInvalid(false)
     .build();
 
+  const lendingRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["", "In Progress", "Pre-Approved", "Not Needed"], true)
+    .setAllowInvalid(false)
+    .build();
+
   const contractRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["", "Yes", "No"], true)
     .setAllowInvalid(false)
@@ -1325,7 +1366,9 @@ function applyDropdowns_(sheet) {
   sheet.getRange(2, 19, maxRows, 1).setDataValidation(statusRule);
   sheet.getRange(2, 22, maxRows, 1).setDataValidation(rankRule);
   sheet.getRange(2, 23, maxRows, 1).setDataValidation(textStatusRule);
-  sheet.getRange(2, 25, maxRows, 1).setDataValidation(contractRule);
+  sheet.getRange(2, 24, maxRows, 1).setDataValidation(lendingRule);
+  sheet.getRange(2, 26, maxRows, 1).setDataValidation(contractRule);
+  sheet.getRange(2, 29, maxRows, 1).setDataValidation(contractRule);
 }
 
 function applyStatusFormatting_(sheet) {
