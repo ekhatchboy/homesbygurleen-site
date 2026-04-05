@@ -868,6 +868,17 @@ body.site-background::after {
   border: 1px solid var(--line);
 }
 
+.button-danger {
+  background: rgba(201, 72, 72, 0.12);
+  color: #8c2f2f;
+  border: 1px solid rgba(201, 72, 72, 0.28);
+}
+
+.button-danger:hover {
+  background: rgba(201, 72, 72, 0.2);
+  border-color: rgba(201, 72, 72, 0.4);
+}
+
 .crm-card,
 .crm-metric,
 .crm-lead-row,

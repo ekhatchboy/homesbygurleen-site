@@ -292,14 +292,15 @@ function renderSelectedLead() {
       ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C"], lead["Follow-Up Rank"] || "Rank A")}
       ${renderSelect("Text Status", ["Pending Review", "Ready", "Sent", "Skipped"], lead["Text Status"] || "Pending Review")}
       ${renderSelect("Lending", ["", "In Progress", "Pre-Approved", "Not Needed"], lead["Lending"] || "")}
-      ${renderTextarea("Goal / Context", lead["Goal / Context"], true)}
-      ${renderTextarea("Latest Message / Notes", lead["Latest Message / Notes"], true)}
-      ${renderTextarea("Assigned Message", lead["Assigned Message"], true)}
-      <div class="crm-full crm-form-actions">
-        <button type="submit" class="button button-primary">${state.isSaving ? "Saving..." : "Save lead updates"}</button>
-        <button type="button" class="button button-secondary" id="copyTranscriptButton">Copy transcript</button>
-      </div>
-    </form>
+        ${renderTextarea("Goal / Context", lead["Goal / Context"], true)}
+        ${renderTextarea("Latest Message / Notes", lead["Latest Message / Notes"], true)}
+        ${renderTextarea("Assigned Message", lead["Assigned Message"], true)}
+        <div class="crm-full crm-form-actions">
+          <button type="submit" class="button button-primary">${state.isSaving ? "Saving..." : "Save lead updates"}</button>
+          <button type="button" class="button button-secondary" id="copyTranscriptButton">Copy transcript</button>
+          <button type="button" class="button button-danger" id="deleteLeadButton">Delete lead</button>
+        </div>
+      </form>
     <p class="crm-inline-note">Transcript and raw responses stay preserved in Google Sheets so you always keep the original lead context.</p>
   `;
 
@@ -316,6 +317,10 @@ function renderSelectedLead() {
     } catch {
       elements.statusText.textContent = "Unable to copy transcript from this browser.";
     }
+  });
+
+  document.querySelector("#deleteLeadButton")?.addEventListener("click", () => {
+    deleteLead(lead);
   });
 
   document.querySelectorAll("[data-quick-action]").forEach((button) => {
@@ -1003,6 +1008,54 @@ async function saveLeadPatch(payload) {
     }
   } catch (error) {
     elements.statusText.textContent = error.message || "Unable to save quick action.";
+  } finally {
+    state.isSaving = false;
+    renderSelectedLead();
+  }
+}
+
+async function deleteLead(lead) {
+  if (!lead?.["Lead ID"] || state.isSaving) {
+    return;
+  }
+
+  const displayName = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "this lead";
+  const shouldDelete = window.confirm(`Delete ${displayName} from the CRM? This removes the lead from Master Leads.`);
+
+  if (!shouldDelete) {
+    return;
+  }
+
+  state.isSaving = true;
+  renderSelectedLead();
+  elements.statusText.textContent = "Deleting lead from your master sheet.";
+
+  try {
+    const response = await fetch("/crm/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "deleteLead",
+        leadId: lead["Lead ID"]
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Unable to delete lead.");
+    }
+
+    const deletedLeadId = result.leadId || lead["Lead ID"];
+    state.leads = state.leads.filter((entry) => entry["Lead ID"] !== deletedLeadId);
+    state.filteredLeads = state.filteredLeads.filter((entry) => entry["Lead ID"] !== deletedLeadId);
+    state.selectedLeadId = state.filteredLeads[0]?.["Lead ID"] || state.leads[0]?.["Lead ID"] || "";
+    applyFilters();
+    elements.statusText.textContent = "Lead deleted.";
+  } catch (error) {
+    elements.statusText.textContent = error.message || "Unable to delete lead.";
   } finally {
     state.isSaving = false;
     renderSelectedLead();

@@ -202,6 +202,17 @@ function doPost(e) {
       });
     }
 
+    if (action === "deleteLead") {
+      authorizeCrm_(e, payload);
+      setupSheets();
+      backupMasterLeadsDaily();
+
+      return jsonResponse_({
+        ok: true,
+        leadId: handleLeadDelete_(payload)
+      });
+    }
+
     const secret = PropertiesService.getScriptProperties().getProperty("WEBHOOK_SECRET");
     const providedSecret = payload.webhookSecret || getRequestParameter_(e, "webhookSecret") || getHeaderValue_(e, "x-webhook-secret");
 
@@ -1261,6 +1272,37 @@ function handleLeadCreate_(payload) {
   const rowNumber = sheet.getLastRow();
   applyLeadRowValidations_(sheet, rowNumber);
   return getLeadRecordByRow_(sheet, rowNumber, headers);
+}
+
+function handleLeadDelete_(payload) {
+  const leadId = String(payload.leadId || "").trim();
+
+  if (!leadId) {
+    throw new Error("Missing leadId");
+  }
+
+  const sheet = getMasterLeadSheet_();
+  const headers = sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).getValues()[0];
+  const leadIdColumn = headers.indexOf("Lead ID") + 1;
+
+  if (!leadIdColumn) {
+    throw new Error("Lead ID column not found");
+  }
+
+  const dataRowCount = Math.max(sheet.getLastRow() - 1, 0);
+  if (!dataRowCount) {
+    throw new Error("Lead not found");
+  }
+
+  const leadIds = sheet.getRange(2, leadIdColumn, dataRowCount, 1).getValues();
+  const rowOffset = leadIds.findIndex(([value]) => String(value).trim() === leadId);
+
+  if (rowOffset === -1) {
+    throw new Error("Lead not found");
+  }
+
+  sheet.deleteRow(rowOffset + 2);
+  return leadId;
 }
 
 function normalizeIncomingDate_(value) {
