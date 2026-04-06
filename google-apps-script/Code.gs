@@ -459,11 +459,13 @@ function ensureGuideSheet_() {
     ["Rank A", "Highest priority lead. Follow up quickly."],
     ["Rank B", "Important lead. Keep warm and follow up consistently."],
     ["Rank C", "Lower urgency lead. Follow up less frequently."],
+    ["Touchpoint", "Light check-in lead. Keep the relationship warm without high urgency."],
     ["", ""],
     ["Suggested Timing", "Recommendation"],
     ["Rank A", "2 days after lead comes in."],
     ["Rank B", "5 days after last contact."],
     ["Rank C", "7 days after last contact."],
+    ["Touchpoint", "Use for lighter check-ins when you want to stay top of mind."],
     ["", ""],
     ["Text Status", "Meaning"],
     ["Pending Review", "Needs review before outreach."],
@@ -939,6 +941,10 @@ function inferLeadTypeFromSheetName_(sheetName) {
     return "Investor";
   }
 
+  if (normalized.includes("contact")) {
+    return "Contact";
+  }
+
   if (normalized.includes("referral")) {
     return "Referral";
   }
@@ -968,6 +974,10 @@ function normalizeLeadType_(value) {
 
   if (normalized === "seller") {
     return "Seller";
+  }
+
+  if (normalized === "contact") {
+    return "Contact";
   }
 
   if (normalized === "referral") {
@@ -1016,6 +1026,10 @@ function buildAssignedMessage_(leadType) {
 
   if (type === "buyer + seller") {
     return "Hi, just following up on your buy-and-sell plans with Homes By Gurleen. I'd be happy to help map out the best next step for both sides of the move.";
+  }
+
+  if (type === "contact") {
+    return "Hi, just following up with Homes By Gurleen. I'd be happy to connect and help with whatever you need next.";
   }
 
   if (type === "investor") {
@@ -1340,7 +1354,7 @@ function applyDropdowns_(sheet) {
   const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1355,7 +1369,7 @@ function applyDropdowns_(sheet) {
     .build();
 
   const rankRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Rank A", "Rank B", "Rank C"], true)
+    .requireValueInList(["Rank A", "Rank B", "Rank C", "Touchpoint"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1390,7 +1404,7 @@ function applyLeadRowValidations_(sheet, rowNumber) {
   }
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1405,7 +1419,7 @@ function applyLeadRowValidations_(sheet, rowNumber) {
     .build();
 
   const rankRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Rank A", "Rank B", "Rank C"], true)
+    .requireValueInList(["Rank A", "Rank B", "Rank C", "Touchpoint"], true)
     .setAllowInvalid(false)
     .build();
 

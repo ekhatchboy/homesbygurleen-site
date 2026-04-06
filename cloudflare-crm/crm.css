@@ -654,6 +654,16 @@ body::after {
   box-shadow: 0 10px 18px rgba(131, 35, 35, 0.18);
 }
 
+.crm-pill.is-lead-type {
+  background: rgba(95, 81, 75, 0.08);
+  color: #5f514b;
+}
+
+.crm-pill.is-contact {
+  background: #e6dcff;
+  color: #5e3a92;
+}
+
 .crm-detail-card {
   min-height: 780px;
   padding: 28px;

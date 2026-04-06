@@ -169,15 +169,16 @@ function renderLeadList() {
     const dueState = getDueState(lead["Next Follow-Up Date"]);
 
     return `
-      <button type="button" class="crm-lead-row${isActive ? " is-active" : ""}" data-lead-id="${escapeHtml(lead["Lead ID"])}">
-        <h3 class="crm-lead-title">${escapeHtml(name)}</h3>
-        <div class="crm-lead-subtitle">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")}</div>
-        <div class="crm-lead-meta">
-          ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
-          ${renderContractPills(lead)}
-          ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
-            ${renderPill(dueState.label, dueState.className)}
-        </div>
+        <button type="button" class="crm-lead-row${isActive ? " is-active" : ""}" data-lead-id="${escapeHtml(lead["Lead ID"])}">
+          <h3 class="crm-lead-title">${escapeHtml(name)}</h3>
+          <div class="crm-lead-subtitle">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")}</div>
+          <div class="crm-lead-meta">
+            ${renderLeadTypePill(lead["Lead Type"])}
+            ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
+            ${renderContractPills(lead)}
+            ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
+              ${renderPill(dueState.label, dueState.className)}
+          </div>
       </button>
     `;
   }).join("");
@@ -208,13 +209,14 @@ function renderSelectedLead() {
       <div>
         <h3>${escapeHtml(name)}</h3>
         <p class="crm-detail-note">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")} | ${escapeHtml(lead["Lead ID"] || "")}</p>
-      </div>
+        </div>
       <div class="crm-lead-meta">
-        ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
-        ${renderContractPills(lead)}
-        ${renderPill(lead["Text Status"] || "Pending Review")}
-        ${renderPill(dueState.label, dueState.className)}
-      </div>
+          ${renderLeadTypePill(lead["Lead Type"])}
+          ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
+          ${renderContractPills(lead)}
+          ${renderPill(lead["Text Status"] || "Pending Review")}
+          ${renderPill(dueState.label, dueState.className)}
+        </div>
     </div>
 
     <section class="crm-summary-panel">
@@ -273,7 +275,7 @@ function renderSelectedLead() {
 
     <form id="leadEditForm" class="crm-form-grid">
       ${renderInput("Name", lead["Name"])}
-      ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
+      ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
       ${renderInput("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "")}
       ${renderInput("Email", lead["Email"])}
       ${renderInput("Area", lead["Area"])}
@@ -289,7 +291,7 @@ function renderSelectedLead() {
       ${renderInput("Seller Contract Expiration Date", lead["Seller Contract Expiration Date"], "date")}
       ${renderInput("Last Contact Date", lead["Last Contact Date"], "date")}
       ${renderInput("Next Follow-Up Date", lead["Next Follow-Up Date"], "date")}
-      ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C"], lead["Follow-Up Rank"] || "Rank A")}
+      ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C", "Touchpoint"], lead["Follow-Up Rank"] || "Rank A")}
       ${renderSelect("Text Status", ["Pending Review", "Ready", "Sent", "Skipped"], lead["Text Status"] || "Pending Review")}
       ${renderSelect("Lending", ["", "In Progress", "Pre-Approved", "Not Needed"], lead["Lending"] || "")}
         ${renderTextarea("Goal / Context", lead["Goal / Context"], true)}
@@ -590,8 +592,10 @@ function getRankPriorityValue(rank) {
       return 1;
     case "Rank C":
       return 2;
-    default:
+    case "Touchpoint":
       return 3;
+    default:
+      return 4;
   }
 }
 
@@ -641,8 +645,19 @@ function formatLongDate(value) {
 }
 
 function renderPill(text, className = "") {
-  return text ? `<span class="crm-pill ${className}">${escapeHtml(text)}</span>` : "";
-}
+    return text ? `<span class="crm-pill ${className}">${escapeHtml(text)}</span>` : "";
+  }
+
+function renderLeadTypePill(leadType) {
+    const value = String(leadType || "").trim();
+
+    if (!value) {
+      return "";
+    }
+
+    const className = `is-lead-type is-${value.toLowerCase().replace(/\s+/g, "-").replace(/\+/g, "")}`;
+    return renderPill(value, className);
+  }
 
 function renderPipelineDuePill(dueState, lead) {
   if (!dueState?.label) {
