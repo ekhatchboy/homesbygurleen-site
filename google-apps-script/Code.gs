@@ -446,6 +446,7 @@ function ensureGuideSheet_() {
     ["Active", "Currently in conversation or being worked."],
     ["Warm", "Interested lead but not urgent right now."],
     ["No Answer", "Outreach has gone out, but there has not been a response yet."],
+    ["Contact", "General contact or relationship lead that is active in your network."],
     ["Closed", "No further follow-up needed."],
     ["", ""],
     ["Lead Status Colors", "Meaning"],
@@ -453,6 +454,7 @@ function ensureGuideSheet_() {
     ["Active", "Bright green"],
     ["Warm", "Light peach"],
     ["No Answer", "Soft rose"],
+    ["Contact", "Soft purple"],
     ["Closed", "Light gray"],
     ["", ""],
     ["Follow-Up Rank", "Meaning"],
@@ -941,10 +943,6 @@ function inferLeadTypeFromSheetName_(sheetName) {
     return "Investor";
   }
 
-  if (normalized.includes("contact")) {
-    return "Contact";
-  }
-
   if (normalized.includes("referral")) {
     return "Referral";
   }
@@ -974,10 +972,6 @@ function normalizeLeadType_(value) {
 
   if (normalized === "seller") {
     return "Seller";
-  }
-
-  if (normalized === "contact") {
-    return "Contact";
   }
 
   if (normalized === "referral") {
@@ -1026,10 +1020,6 @@ function buildAssignedMessage_(leadType) {
 
   if (type === "buyer + seller") {
     return "Hi, just following up on your buy-and-sell plans with Homes By Gurleen. I'd be happy to help map out the best next step for both sides of the move.";
-  }
-
-  if (type === "contact") {
-    return "Hi, just following up with Homes By Gurleen. I'd be happy to connect and help with whatever you need next.";
   }
 
   if (type === "investor") {
@@ -1354,7 +1344,7 @@ function applyDropdowns_(sheet) {
   const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1364,7 +1354,7 @@ function applyDropdowns_(sheet) {
     .build();
 
   const statusRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["New", "Active", "Warm", "No Answer", "Closed"], true)
+    .requireValueInList(["New", "Active", "Warm", "No Answer", "Contact", "Closed"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1404,7 +1394,7 @@ function applyLeadRowValidations_(sheet, rowNumber) {
   }
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1414,7 +1404,7 @@ function applyLeadRowValidations_(sheet, rowNumber) {
     .build();
 
   const statusRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["New", "Active", "Warm", "No Answer", "Closed"], true)
+    .requireValueInList(["New", "Active", "Warm", "No Answer", "Contact", "Closed"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1491,7 +1481,13 @@ function applyStatusFormatting_(sheet) {
       .setBackground("#f4d7d7")
       .setRanges([sheet.getRange(2, 19, lastRow - 1, 1)])
       .build()
-    ,
+      ,
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo("Contact")
+      .setBackground("#e6dcff")
+      .setRanges([sheet.getRange(2, 19, lastRow - 1, 1)])
+      .build()
+      ,
     SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo("Closed")
       .setBackground("#e6e6e6")

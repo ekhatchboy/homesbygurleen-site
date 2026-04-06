@@ -173,7 +173,6 @@ function renderLeadList() {
           <h3 class="crm-lead-title">${escapeHtml(name)}</h3>
           <div class="crm-lead-subtitle">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")}</div>
           <div class="crm-lead-meta">
-            ${renderLeadTypePill(lead["Lead Type"])}
             ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
             ${renderContractPills(lead)}
             ${renderPill(lead["Follow-Up Rank"] || "Rank A")}
@@ -211,7 +210,6 @@ function renderSelectedLead() {
         <p class="crm-detail-note">${escapeHtml(lead["Lead Type"] || "Lead")} | ${escapeHtml(lead["Source"] || "Unknown source")} | ${escapeHtml(lead["Lead ID"] || "")}</p>
         </div>
       <div class="crm-lead-meta">
-          ${renderLeadTypePill(lead["Lead Type"])}
           ${renderPill(lead["Lead Status"], `is-${String(lead["Lead Status"] || "").toLowerCase()}`)}
           ${renderContractPills(lead)}
           ${renderPill(lead["Text Status"] || "Pending Review")}
@@ -275,14 +273,14 @@ function renderSelectedLead() {
 
     <form id="leadEditForm" class="crm-form-grid">
       ${renderInput("Name", lead["Name"])}
-      ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
+      ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
       ${renderInput("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "")}
       ${renderInput("Email", lead["Email"])}
       ${renderInput("Area", lead["Area"])}
       ${renderInput("Timeline", lead["Timeline"])}
       ${renderInput("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "")}
       ${renderSelect("Consent to Text", ["", "Yes", "No"], lead["Consent to Text"])}
-      ${renderSelect("Lead Status", ["New", "Active", "Warm", "No Answer", "Closed"], lead["Lead Status"] || "New")}
+      ${renderSelect("Lead Status", ["New", "Active", "Warm", "No Answer", "Contact", "Closed"], lead["Lead Status"] || "New")}
       ${renderSelect("Buyer Contract Signed", ["", "Yes", "No"], lead["Buyer Contract Signed"] || "")}
       ${renderInput("Buyer Contract Signed Date", lead["Buyer Contract Signed Date"], "date")}
       ${renderInput("Buyer Contract Expiration Date", lead["Buyer Contract Expiration Date"], "date")}
@@ -335,7 +333,7 @@ function renderPipelineBoard() {
     return;
   }
 
-  const statuses = ["New", "Active", "Warm", "No Answer", "Closed"];
+  const statuses = ["New", "Active", "Warm", "No Answer", "Contact", "Closed"];
 
   elements.pipelineBoard.innerHTML = statuses.map((status) => {
     const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
@@ -646,17 +644,6 @@ function formatLongDate(value) {
 
 function renderPill(text, className = "") {
     return text ? `<span class="crm-pill ${className}">${escapeHtml(text)}</span>` : "";
-  }
-
-function renderLeadTypePill(leadType) {
-    const value = String(leadType || "").trim();
-
-    if (!value) {
-      return "";
-    }
-
-    const className = `is-lead-type is-${value.toLowerCase().replace(/\s+/g, "-").replace(/\+/g, "")}`;
-    return renderPill(value, className);
   }
 
 function renderPipelineDuePill(dueState, lead) {
