@@ -273,7 +273,7 @@ function renderSelectedLead() {
 
     <form id="leadEditForm" class="crm-form-grid">
       ${renderInput("Name", lead["Name"])}
-      ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
+      ${renderSelect("Lead Type", ["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], lead["Lead Type"] || "Buyer")}
       ${renderInput("Phone", lead["Phone"] ? formatPhoneValue(lead["Phone"]) : "")}
       ${renderInput("Email", lead["Email"])}
       ${renderInput("Area", lead["Area"])}

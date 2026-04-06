@@ -1344,7 +1344,7 @@ function applyDropdowns_(sheet) {
   const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
     .setAllowInvalid(false)
     .build();
 
@@ -1394,7 +1394,7 @@ function applyLeadRowValidations_(sheet, rowNumber) {
   }
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Referral", "Investor"], true)
+    .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
     .setAllowInvalid(false)
     .build();
 
