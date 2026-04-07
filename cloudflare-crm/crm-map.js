@@ -911,14 +911,19 @@ function openPreviewPopup() {
       });
     });
 
-    popupRoot.querySelector("[data-popup-clear-preview]")?.addEventListener("click", async () => {
+    popupRoot.querySelector("[data-popup-clear-preview]")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
       if (!state.previewProperty) {
+        elements.mapStatusText.textContent = "No house preview is active to clear.";
         return;
       }
 
       const existing = findMatchingPropertyForPreview_();
 
       if (existing) {
+        elements.mapStatusText.textContent = "Clearing house color...";
         await clearPropertyColor(existing.id);
       } else {
         state.selectedBuildingLayer = null;
