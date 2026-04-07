@@ -6,7 +6,10 @@ const state = {
   filter: "all",
   map: null,
   markerLayer: null,
-  previewMarker: null
+  previewMarker: null,
+  buildingLayer: null,
+  selectedBuildingLayer: null,
+  buildingFetchToken: 0
 };
 
 const elements = {
@@ -43,6 +46,11 @@ function initializeMap() {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(state.map);
   state.markerLayer = L.layerGroup().addTo(state.map);
+  state.buildingLayer = L.layerGroup().addTo(state.map);
+  state.map.on("moveend zoomend", () => {
+    loadBuildingFootprints();
+  });
+  loadBuildingFootprints();
 }
 
 function loadProperties() {
@@ -159,6 +167,129 @@ function renderMapMarkers() {
   } else if (withCoords.length > 1) {
     state.map.fitBounds(L.latLngBounds(withCoords.map((entry) => [entry.lat, entry.lng])).pad(0.22));
   }
+}
+
+async function loadBuildingFootprints() {
+  if (!state.map || !state.buildingLayer) {
+    return;
+  }
+
+  const zoom = state.map.getZoom();
+  state.buildingLayer.clearLayers();
+  state.selectedBuildingLayer = null;
+
+  if (zoom < 17) {
+    return;
+  }
+
+  const bounds = state.map.getBounds();
+  const south = bounds.getSouth();
+  const west = bounds.getWest();
+  const north = bounds.getNorth();
+  const east = bounds.getEast();
+  const token = ++state.buildingFetchToken;
+
+  try {
+    const response = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=UTF-8"
+      },
+      body: `
+[out:json][timeout:20];
+(
+  way["building"](${south},${west},${north},${east});
+);
+out body;
+>;
+out skel qt;
+      `.trim()
+    });
+
+    if (!response.ok || token !== state.buildingFetchToken) {
+      return;
+    }
+
+    const data = await response.json();
+    if (token !== state.buildingFetchToken) {
+      return;
+    }
+
+    const nodeMap = new Map();
+    (data.elements || []).forEach((element) => {
+      if (element.type === "node") {
+        nodeMap.set(element.id, [element.lat, element.lon]);
+      }
+    });
+
+    (data.elements || []).forEach((element) => {
+      if (element.type !== "way" || !Array.isArray(element.nodes)) {
+        return;
+      }
+
+      const latLngs = element.nodes
+        .map((nodeId) => nodeMap.get(nodeId))
+        .filter(Boolean);
+
+      if (latLngs.length < 3) {
+        return;
+      }
+
+      const polygon = L.polygon(latLngs, {
+        color: "rgba(138, 75, 58, 0.18)",
+        weight: 1,
+        fillColor: "rgba(138, 75, 58, 0.08)",
+        fillOpacity: 0.22
+      });
+
+      polygon.on("click", async () => {
+        await handleBuildingClick(latLngs, polygon);
+      });
+
+      polygon.addTo(state.buildingLayer);
+    });
+  } catch {
+    // Ignore footprint fetch failures quietly; the saved marker workflow still works.
+  }
+}
+
+async function handleBuildingClick(latLngs, polygon) {
+  highlightBuilding(polygon);
+
+  const centroid = getPolygonCentroid(latLngs);
+  if (!centroid) {
+    return;
+  }
+
+  elements.mapStatusText.textContent = "Looking up that house so you can add it.";
+
+  try {
+    const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
+    document.querySelector("#propertyAddress").value = address;
+    showPreviewMarker(centroid, address);
+    elements.mapStatusText.textContent = "House selected from the base map. Add notes or save it when you're ready.";
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "I couldn't identify that house yet.";
+  }
+}
+
+function highlightBuilding(polygon) {
+  if (state.selectedBuildingLayer) {
+    state.selectedBuildingLayer.setStyle({
+      color: "rgba(138, 75, 58, 0.18)",
+      weight: 1,
+      fillColor: "rgba(138, 75, 58, 0.08)",
+      fillOpacity: 0.22
+    });
+  }
+
+  state.selectedBuildingLayer = polygon;
+  polygon.setStyle({
+    color: "rgba(93, 45, 37, 0.48)",
+    weight: 2,
+    fillColor: "rgba(138, 75, 58, 0.18)",
+    fillOpacity: 0.4
+  });
 }
 
 function renderPropertyDetail() {
@@ -306,6 +437,25 @@ async function geocodeAddress(address) {
   return { lat: Number(match.lat), lng: Number(match.lon) };
 }
 
+async function reverseGeocodeLatLng(lat, lng) {
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`, {
+    headers: { "Accept": "application/json" }
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to look up that house on the map.");
+  }
+
+  const result = await response.json();
+  const address = String(result.display_name || "").trim();
+
+  if (!address) {
+    throw new Error("I couldn't find a full address for that house.");
+  }
+
+  return address;
+}
+
 function loadPropertyIntoForm(property) {
   elements.propertyForm.address.value = property.address || "";
   elements.propertyForm.leadName.value = property.leadName || "";
@@ -405,4 +555,21 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function getPolygonCentroid(latLngs) {
+  if (!Array.isArray(latLngs) || !latLngs.length) {
+    return null;
+  }
+
+  const totals = latLngs.reduce((acc, [lat, lng]) => {
+    acc.lat += Number(lat);
+    acc.lng += Number(lng);
+    return acc;
+  }, { lat: 0, lng: 0 });
+
+  return {
+    lat: totals.lat / latLngs.length,
+    lng: totals.lng / latLngs.length
+  };
 }
