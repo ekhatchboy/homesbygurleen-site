@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Homes By Gurleen Property Map</title>
-  <meta name="description" content="Private Homes By Gurleen property map for visited homes, house notes, and field tracking.">
+  <meta name="description" content="Private Homes By Gurleen property board for visited homes, house notes, and field tracking.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="crm-map.css">
 </head>
 <body>
@@ -29,9 +28,9 @@
     <main class="map-shell">
       <section class="map-hero">
         <div class="map-hero-copy">
-          <p class="map-kicker">2D Property Map</p>
+          <p class="map-kicker">Custom Property Board</p>
           <h1>Track every home you have visited, revisited, or need notes on.</h1>
-          <p>Use this as your field map. Add a house, pin it on the map, mark whether you have been there, and keep your notes tied to the property instead of losing them in a text thread.</p>
+          <p>Use this as your field board. Preview a house, color it, and keep your property notes tied to something that behaves reliably.</p>
         </div>
         <div class="map-hero-summary">
           <div class="map-summary-card">
@@ -64,7 +63,7 @@
                 <input id="propertyAddress" name="address" type="text" placeholder="742 Newton Court, Merced, CA" required>
               </label>
               <div class="map-address-actions">
-                <button type="button" class="map-button map-button-secondary" id="searchPropertyButton">Search on Map</button>
+                <button type="button" class="map-button map-button-secondary" id="searchPropertyButton">Preview on Board</button>
               </div>
               <label>
                 <span>Client or lead</span>
@@ -90,7 +89,7 @@
                 <button type="submit" class="map-button map-button-primary" id="propertySubmitButton">Add property</button>
               </div>
             </form>
-            <p class="map-inline-note" id="mapStatusText">Properties stay saved in this browser so you can start using the map right away.</p>
+            <p class="map-inline-note" id="mapStatusText">Properties stay saved in this browser so you can start using the board right away.</p>
           </section>
 
           <section class="map-card">
@@ -116,22 +115,21 @@
           <section class="map-card map-canvas-card">
             <div class="map-card-heading">
               <div>
-                <p class="map-kicker">Interactive Map</p>
-                <h2>2D is easier to scan while you are actually working.</h2>
+                <p class="map-kicker">Custom Property Board</p>
+                <h2>A simpler board that saves color reliably.</h2>
               </div>
             </div>
-            <div id="propertyMap" class="property-map"></div>
+            <div id="propertyMap" class="property-map board-map"></div>
           </section>
 
           <section class="map-card map-detail-card" id="propertyDetailCard">
-            <div class="map-empty-state">Click a house pin or a property in the list to open its notes.</div>
+            <div class="map-empty-state">Click a house on the board or a property in the list to open its notes.</div>
           </section>
         </section>
       </section>
     </main>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="crm-map.js" type="module"></script>
+  <script src="crm-map-board.js" type="module"></script>
 </body>
 </html>
