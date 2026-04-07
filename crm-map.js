@@ -530,10 +530,11 @@ function renderMarkerIcon(property) {
 }
 
 function readableStatus(status) {
-  if (status === "visited") return "Visited";
-  if (status === "under-contract") return "Under Contract";
-  return "Upcoming";
-}
+    if (!status) return "Not Set";
+    if (status === "visited") return "Visited";
+    if (status === "under-contract") return "Under Contract";
+    return "Upcoming";
+  }
 
 async function handlePropertySubmit(event) {
   event.preventDefault();
@@ -745,13 +746,13 @@ async function showPreviewMarker(location, address) {
     state.selectedBuildingLayer = matchedBuilding;
   }
   state.previewProperty = {
-    address,
-    lat: Number(location.lat),
-    lng: Number(location.lng),
-    status: "upcoming",
-    buildingKey: matchedBuilding?.__buildingKey || "",
-    shapePoints: matchedBuilding ? serializeShapePoints_(matchedBuilding) : ""
-  };
+      address,
+      lat: Number(location.lat),
+      lng: Number(location.lng),
+      status: "",
+      buildingKey: matchedBuilding?.__buildingKey || "",
+      shapePoints: matchedBuilding ? serializeShapePoints_(matchedBuilding) : ""
+    };
   document.querySelector("#propertyAddress").value = address;
   state.selectedId = "";
   renderPropertyDetail();
