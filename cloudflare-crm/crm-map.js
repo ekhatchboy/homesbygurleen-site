@@ -398,9 +398,9 @@ async function handleBuildingClick(latLngs, polygon) {
   elements.mapStatusText.textContent = "Looking up that house so you can color it on the map.";
 
   try {
-    const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
-    await showPreviewMarker(centroid, address);
-    elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
+      const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
+      await showPreviewMarker(centroid, address, polygon);
+      elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that house yet.";
   }
@@ -741,9 +741,9 @@ function focusSelectedMarker() {
   refreshBuildingStyles();
 }
 
-async function showPreviewMarker(location, address) {
+async function showPreviewMarker(location, address, preferredBuilding) {
   clearPreviewMarker();
-  const matchedBuilding = await ensureNearestBuildingLayer(location.lat, location.lng);
+  const matchedBuilding = preferredBuilding || await ensureNearestBuildingLayer(location.lat, location.lng);
   if (!matchedBuilding) {
     document.querySelector("#propertyAddress").value = address;
     state.selectedBuildingLayer = null;
@@ -796,10 +796,16 @@ async function savePreviewProperty() {
     return;
   }
 
+  if (state.previewPopup && state.map) {
+    state.map.closePopup(state.previewPopup);
+    state.previewPopup.remove();
+    state.previewPopup = null;
+  }
+
   const preview = state.previewProperty;
   if (!preview.shapePoints) {
-    elements.mapStatusText.textContent = "I didn't lock onto a house shape yet. Click directly on a house footprint, then save again.";
-    return;
+      elements.mapStatusText.textContent = "I didn't lock onto a house shape yet. Click directly on a house footprint, then save again.";
+      return;
   }
 
   try {
@@ -840,10 +846,7 @@ async function savePreviewProperty() {
 
   state.selectedId = "";
   saveProperties();
-  if (state.previewPopup && state.map) {
-    state.map.closePopup(state.previewPopup);
-    state.previewPopup.remove();
-  } else {
+  if (!(state.previewPopup && state.map)) {
     state.map?.closePopup();
   }
   clearPreviewMarker();
@@ -1044,16 +1047,26 @@ function findNearestBuildingLayer(lat, lng) {
     }
   });
 
-  return closestDistance <= 0.0012 ? closest : null;
+  return closestDistance <= 0.0018 ? closest : null;
 }
 
 async function ensureNearestBuildingLayer(lat, lng) {
-  let matchedBuilding = findNearestBuildingLayer(lat, lng);
+  let matchedBuilding = findContainingBuildingLayer(lat, lng);
+  if (matchedBuilding) {
+    return matchedBuilding;
+  }
+
+  matchedBuilding = findNearestBuildingLayer(lat, lng);
   if (matchedBuilding) {
     return matchedBuilding;
   }
 
   await loadBuildingFootprints();
+  matchedBuilding = findContainingBuildingLayer(lat, lng);
+  if (matchedBuilding) {
+    return matchedBuilding;
+  }
+
   matchedBuilding = findNearestBuildingLayer(lat, lng);
   if (matchedBuilding) {
     return matchedBuilding;
@@ -1107,6 +1120,74 @@ function parseShapePoints_(value) {
     .filter((pair) => pair.length === 2)
     .map(([lat, lng]) => [Number(lat), Number(lng)])
     .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+}
+
+function findContainingBuildingLayer(lat, lng) {
+  if (!state.buildingLayer) {
+    return null;
+  }
+
+  let containingLayer = null;
+  let smallestArea = Infinity;
+
+  state.buildingLayer.eachLayer((layer) => {
+    if (!layer?.getLatLngs || !layer.getBounds?.().contains([lat, lng])) {
+      return;
+    }
+
+    const raw = layer.getLatLngs();
+    const ring = Array.isArray(raw[0]) ? raw[0] : raw;
+    if (!Array.isArray(ring) || ring.length < 3) {
+      return;
+    }
+
+    if (!isPointInsidePolygon_([lat, lng], ring)) {
+      return;
+    }
+
+    const area = approximatePolygonArea_(ring);
+    if (area < smallestArea) {
+      smallestArea = area;
+      containingLayer = layer;
+    }
+  });
+
+  return containingLayer;
+}
+
+function isPointInsidePolygon_(point, ring) {
+  const [testLat, testLng] = point;
+  let inside = false;
+
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const yi = Number(ring[i].lat ?? ring[i][0]);
+    const xi = Number(ring[i].lng ?? ring[i][1]);
+    const yj = Number(ring[j].lat ?? ring[j][0]);
+    const xj = Number(ring[j].lng ?? ring[j][1]);
+
+    const intersects = ((yi > testLat) !== (yj > testLat)) &&
+      (testLng < ((xj - xi) * (testLat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function approximatePolygonArea_(ring) {
+  let area = 0;
+
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const yi = Number(ring[i].lat ?? ring[i][0]);
+    const xi = Number(ring[i].lng ?? ring[i][1]);
+    const yj = Number(ring[j].lat ?? ring[j][0]);
+    const xj = Number(ring[j].lng ?? ring[j][1]);
+    area += (xj * yi) - (xi * yj);
+  }
+
+  return Math.abs(area / 2);
 }
 
 function findMatchingPropertyForPreview_() {
