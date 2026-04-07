@@ -1,5 +1,20 @@
 const STORAGE_KEY = "hbg-property-map-v1";
-const state = { properties: [], selectedId: "", filter: "all", map: null, markerLayer: null, previewMarker: null, previewPopup: null, previewProperty: null, buildingLayer: null, selectedBuildingLayer: null, buildingFetchToken: 0 };
+
+const state = {
+  properties: [],
+  selectedId: "",
+  filter: "all",
+  map: null,
+  markerLayer: null,
+  previewMarker: null,
+  previewPopup: null,
+  previewProperty: null,
+  buildingLayer: null,
+  selectedBuildingLayer: null,
+  buildingFetchToken: 0,
+  suppressMapClickUntil: 0
+};
+
 const elements = {
   propertyForm: document.querySelector("#propertyForm"),
   propertySubmitButton: document.querySelector("#propertySubmitButton"),
@@ -42,7 +57,15 @@ function initializeMap() {
   loadBuildingFootprints();
 }
 
-function loadProperties() {
+async function loadProperties() {
+  const remoteProperties = await loadPropertiesFromSheet_();
+  if (remoteProperties) {
+    state.properties = remoteProperties;
+    state.selectedId = state.properties[0]?.id || "";
+    render();
+    return;
+  }
+
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     state.properties = raw ? JSON.parse(raw) : [];
@@ -55,6 +78,85 @@ function loadProperties() {
 
 function saveProperties() {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.properties));
+}
+
+async function loadPropertiesFromSheet_() {
+  try {
+    const response = await fetch(`/crm/map-homes?ts=${Date.now()}`, {
+      cache: "no-store"
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload?.ok || !Array.isArray(payload.homes)) {
+      return null;
+    }
+
+    return payload.homes.map(mapHomeRecordToProperty_);
+  } catch {
+    return null;
+  }
+}
+
+async function savePropertyToSheet_(property) {
+  const response = await fetch("/crm/map-update", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "upsertMapHome",
+      propertyId: property.id,
+      address: property.address,
+      leadName: property.leadName,
+      status: property.status,
+      visitDate: property.visitDate,
+      notes: property.notes,
+      lat: property.lat,
+      lng: property.lng,
+      buildingKey: property.buildingKey,
+      showInList: property.showInList !== false
+    })
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.ok || !payload.home) {
+    throw new Error(payload?.error || "Unable to save home.");
+  }
+
+  return mapHomeRecordToProperty_(payload.home);
+}
+
+async function deletePropertyFromSheet_(propertyId) {
+  const response = await fetch("/crm/map-update", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "deleteMapHome",
+      propertyId
+    })
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.ok) {
+    throw new Error(payload?.error || "Unable to delete home.");
+  }
+}
+
+function mapHomeRecordToProperty_(record) {
+  return {
+    id: String(record["Property ID"] || record.propertyId || crypto.randomUUID()),
+    address: String(record["Address"] || record.address || "").trim(),
+    leadName: String(record["Lead / Client"] || record.leadName || "").trim(),
+    status: String(record["Status"] || record.status || "upcoming").trim() || "upcoming",
+    visitDate: String(record["Visit Date"] || record.visitDate || "").trim(),
+    notes: String(record["Notes"] || record.notes || "").trim(),
+    lat: Number(record["Latitude"] || record.lat || "") || 0,
+    lng: Number(record["Longitude"] || record.lng || "") || 0,
+    buildingKey: String(record["Building Key"] || record.buildingKey || "").trim(),
+    showInList: String(record["Show In List"] || record.showInList || "Yes").trim().toLowerCase() !== "no"
+  };
 }
 
 function render() {
@@ -82,6 +184,7 @@ function renderPropertyList() {
     elements.propertyList.innerHTML = `<div class="map-empty-state">No homes match this view yet.</div>`;
     return;
   }
+
   elements.propertyList.innerHTML = items.map((property) => `
     <div class="map-property-item${property.id === state.selectedId ? " is-selected" : ""}" data-property-id="${escapeHtml(property.id)}" role="button" tabindex="0">
       <div class="map-property-head">
@@ -95,6 +198,7 @@ function renderPropertyList() {
       </div>
     </div>
   `).join("");
+
   elements.propertyList.querySelectorAll("[data-property-id]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedId = button.getAttribute("data-property-id") || "";
@@ -110,10 +214,11 @@ function renderPropertyList() {
       }
     });
   });
+
   elements.propertyList.querySelectorAll("[data-delete-list-property]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      deleteProperty(button.getAttribute("data-delete-list-property") || "");
+      void deleteProperty(button.getAttribute("data-delete-list-property") || "");
     });
   });
 }
@@ -121,8 +226,12 @@ function renderPropertyList() {
 function renderMapMarkers() {
   state.markerLayer.clearLayers();
   const visible = getFilteredProperties();
+
   visible.forEach((property) => {
-    if (typeof property.lat !== "number" || typeof property.lng !== "number") return;
+    if (typeof property.lat !== "number" || typeof property.lng !== "number") {
+      return;
+    }
+
     const icon = L.divIcon({
       className: "",
       html: renderMarkerIcon(property),
@@ -130,6 +239,7 @@ function renderMapMarkers() {
       iconAnchor: [17, 34],
       popupAnchor: [0, -26]
     });
+
     const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
     marker.bindPopup(`<strong>${escapeHtml(property.address)}</strong><br>${escapeHtml(property.leadName || "No lead linked yet")}<br>${escapeHtml(readableStatus(property.status))}`);
     marker.on("click", () => {
@@ -138,11 +248,15 @@ function renderMapMarkers() {
       renderPropertyDetail();
     });
   });
+
   refreshBuildingStyles();
 }
 
 async function loadBuildingFootprints() {
-  if (!state.map || !state.buildingLayer) return;
+  if (!state.map || !state.buildingLayer) {
+    return;
+  }
+
   const zoom = state.map.getZoom();
   if (zoom < 17) {
     state.buildingLayer.clearLayers();
@@ -160,7 +274,9 @@ async function loadBuildingFootprints() {
   try {
     const response = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      headers: {
+        "Content-Type": "text/plain;charset=UTF-8"
+      },
       body: `
 [out:json][timeout:20];
 (
@@ -171,21 +287,37 @@ out body;
 out skel qt;
       `.trim()
     });
-    if (!response.ok || token !== state.buildingFetchToken) return;
+
+    if (!response.ok || token !== state.buildingFetchToken) {
+      return;
+    }
+
     const data = await response.json();
-    if (token !== state.buildingFetchToken) return;
+    if (token !== state.buildingFetchToken) {
+      return;
+    }
 
     const nodeMap = new Map();
     (data.elements || []).forEach((element) => {
-      if (element.type === "node") nodeMap.set(element.id, [element.lat, element.lon]);
+      if (element.type === "node") {
+        nodeMap.set(element.id, [element.lat, element.lon]);
+      }
     });
 
     const nextLayer = L.layerGroup();
 
     (data.elements || []).forEach((element) => {
-      if (element.type !== "way" || !Array.isArray(element.nodes)) return;
-      const latLngs = element.nodes.map((nodeId) => nodeMap.get(nodeId)).filter(Boolean);
-      if (latLngs.length < 3) return;
+      if (element.type !== "way" || !Array.isArray(element.nodes)) {
+        return;
+      }
+
+      const latLngs = element.nodes
+        .map((nodeId) => nodeMap.get(nodeId))
+        .filter(Boolean);
+
+      if (latLngs.length < 3) {
+        return;
+      }
 
       const polygon = L.polygon(latLngs, {
         color: "rgba(138, 75, 58, 0.18)",
@@ -210,14 +342,20 @@ out skel qt;
     });
     refreshBuildingStyles();
   } catch {
+    // Ignore footprint fetch failures quietly; the saved marker workflow still works.
   }
 }
 
 async function handleBuildingClick(latLngs, polygon) {
   highlightBuilding(polygon);
+
   const centroid = getPolygonCentroid(latLngs);
-  if (!centroid) return;
+  if (!centroid) {
+    return;
+  }
+
   elements.mapStatusText.textContent = "Looking up that house so you can color it on the map.";
+
   try {
     const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
     await showPreviewMarker(centroid, address);
@@ -228,9 +366,16 @@ async function handleBuildingClick(latLngs, polygon) {
 }
 
 async function handleMapClickPreview(event) {
-  if (!event?.latlng) return;
-  if (Date.now() < (state.suppressMapClickUntil || 0)) return;
+  if (!event?.latlng) {
+    return;
+  }
+
+  if (Date.now() < state.suppressMapClickUntil) {
+    return;
+  }
+
   elements.mapStatusText.textContent = "Checking the nearest address on the map.";
+
   try {
     const address = await reverseGeocodeLatLng(event.latlng.lat, event.latlng.lng);
     await showPreviewMarker(event.latlng, address);
@@ -269,18 +414,23 @@ function renderPropertyDetail() {
           <button type="button" class="map-button map-button-secondary" data-load-preview>Load into form</button>
         </div>
       `;
+
       elements.propertyDetailCard.querySelectorAll("[data-preview-status]").forEach((button) => {
         button.addEventListener("click", () => {
           setPreviewStatus(button.getAttribute("data-preview-status") || "upcoming");
         });
       });
-      elements.propertyDetailCard.querySelector("[data-save-preview]")?.addEventListener("click", savePreviewProperty);
+      elements.propertyDetailCard.querySelector("[data-save-preview]")?.addEventListener("click", () => {
+        void savePreviewProperty();
+      });
       elements.propertyDetailCard.querySelector("[data-load-preview]")?.addEventListener("click", () => loadPreviewIntoForm());
       return;
     }
+
     elements.propertyDetailCard.innerHTML = `<div class="map-empty-state">Click a house pin or a property in the list to open its notes.</div>`;
     return;
   }
+
   elements.propertyDetailCard.innerHTML = `
     <div class="map-card-heading">
       <div>
@@ -306,11 +456,14 @@ function renderPropertyDetail() {
       <button type="button" class="map-button map-button-secondary" data-delete-property="${escapeHtml(property.id)}">Delete property</button>
     </div>
   `;
+
   document.querySelector("[data-edit-property]")?.addEventListener("click", () => loadPropertyIntoForm(property));
   document.querySelector("[data-open-map]")?.addEventListener("click", () => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`, "_blank");
   });
-  document.querySelector("[data-delete-property]")?.addEventListener("click", () => deleteProperty(property.id));
+  document.querySelector("[data-delete-property]")?.addEventListener("click", () => {
+    void deleteProperty(property.id);
+  });
 }
 
 function renderStatusPill(status) {
@@ -346,12 +499,16 @@ async function handlePropertySubmit(event) {
   const visitDate = String(formData.get("visitDate") || "").trim();
   const notes = String(formData.get("notes") || "").trim();
   const editId = elements.propertyForm.dataset.editId || "";
+
   if (!address) return;
+
   syncSubmitButton(true, editId ? "Saving..." : "Adding...");
   elements.mapStatusText.textContent = "Finding that address on the map.";
+
   try {
     const existing = editId ? state.properties.find((entry) => entry.id === editId) : null;
     const location = existing && existing.address === address ? { lat: existing.lat, lng: existing.lng } : await geocodeAddress(address);
+
     if (existing) {
       existing.address = address;
       existing.leadName = leadName;
@@ -360,14 +517,31 @@ async function handlePropertySubmit(event) {
       existing.notes = notes;
       existing.lat = location.lat;
       existing.lng = location.lng;
+      existing.showInList = true;
+      existing.buildingKey = existing.buildingKey || "";
+      const savedProperty = await savePropertyToSheet_(existing);
+      Object.assign(existing, savedProperty);
       state.selectedId = existing.id;
       elements.mapStatusText.textContent = "Property updated.";
     } else {
-      const property = { id: crypto.randomUUID(), address, leadName, status, visitDate, notes, lat: location.lat, lng: location.lng };
-      state.properties.unshift(property);
-      state.selectedId = property.id;
+      const property = {
+        id: crypto.randomUUID(),
+        address,
+        leadName,
+        status,
+        visitDate,
+        notes,
+        lat: location.lat,
+        lng: location.lng,
+        buildingKey: "",
+        showInList: true
+      };
+      const savedProperty = await savePropertyToSheet_(property);
+      state.properties.unshift(savedProperty);
+      state.selectedId = savedProperty.id;
       elements.mapStatusText.textContent = "Property added to your map.";
     }
+
     saveProperties();
     clearPreviewMarker();
     elements.propertyForm.reset();
@@ -387,8 +561,10 @@ async function handlePropertySearch() {
     elements.mapStatusText.textContent = "Enter an address first, then search it on the map.";
     return;
   }
+
   syncSearchButton(true);
   elements.mapStatusText.textContent = "Searching that address on the map.";
+
   try {
     const location = await geocodeAddress(address);
     const normalizedAddress = await reverseGeocodeLatLng(location.lat, location.lng).catch(() => address);
@@ -405,7 +581,9 @@ async function handlePropertySearch() {
 
 async function geocodeAddress(address) {
   const query = /livingston/i.test(address) ? address : `${address}, Livingston, CA`;
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&viewbox=-120.77,37.41,-120.67,37.34&bounded=1&q=${encodeURIComponent(query)}`, { headers: { "Accept": "application/json" } });
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&viewbox=-120.77,37.41,-120.67,37.34&bounded=1&q=${encodeURIComponent(query)}`, {
+    headers: { "Accept": "application/json" }
+  });
   if (!response.ok) throw new Error("Map lookup could not reach the address service.");
   const results = await response.json();
   const match = Array.isArray(results) ? results[0] : null;
@@ -417,10 +595,18 @@ async function reverseGeocodeLatLng(lat, lng) {
   const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`, {
     headers: { "Accept": "application/json" }
   });
-  if (!response.ok) throw new Error("Unable to look up that house on the map.");
+
+  if (!response.ok) {
+    throw new Error("Unable to look up that house on the map.");
+  }
+
   const result = await response.json();
   const address = String(result.display_name || "").trim();
-  if (!address) throw new Error("I couldn't find a full address for that house.");
+
+  if (!address) {
+    throw new Error("I couldn't find a full address for that house.");
+  }
+
   return address;
 }
 
@@ -436,10 +622,16 @@ function loadPropertyIntoForm(property) {
   document.querySelector("#propertyAddress")?.focus();
 }
 
-function deleteProperty(propertyId) {
+async function deleteProperty(propertyId) {
   const property = state.properties.find((entry) => entry.id === propertyId);
   if (!property) return;
   if (!window.confirm(`Delete ${property.address} from your property map?`)) return;
+  try {
+    await deletePropertyFromSheet_(propertyId);
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to delete property.";
+    return;
+  }
   state.properties = state.properties.filter((entry) => entry.id !== propertyId);
   if (state.selectedId === propertyId) state.selectedId = state.properties[0]?.id || "";
   saveProperties();
@@ -510,15 +702,21 @@ function clearPreviewMarker() {
 }
 
 function setPreviewStatus(status) {
-  if (!state.previewProperty) return;
+  if (!state.previewProperty) {
+    return;
+  }
+
   state.previewProperty.status = status || "upcoming";
   renderPropertyDetail();
   refreshBuildingStyles();
   elements.mapStatusText.textContent = "Preview house color updated.";
 }
 
-function savePreviewProperty() {
-  if (!state.previewProperty) return;
+async function savePreviewProperty() {
+  if (!state.previewProperty) {
+    return;
+  }
+
   const preview = state.previewProperty;
   const existing = state.properties.find((entry) => isBuildingMatch(state.selectedBuildingLayer, entry) || isLocationMatch(preview, entry));
   if (existing) {
@@ -531,8 +729,10 @@ function savePreviewProperty() {
     if (preview.status === "visited" && !existing.visitDate) {
       existing.visitDate = new Date().toISOString().slice(0, 10);
     }
+    const savedExisting = await savePropertyToSheet_(existing);
+    Object.assign(existing, savedExisting);
   } else {
-    state.properties.unshift({
+    const savedProperty = await savePropertyToSheet_({
       id: crypto.randomUUID(),
       address: preview.address,
       leadName: "",
@@ -544,7 +744,9 @@ function savePreviewProperty() {
       buildingKey: preview.buildingKey || "",
       showInList: false
     });
+    state.properties.unshift(savedProperty);
   }
+
   state.selectedId = "";
   saveProperties();
   if (state.previewPopup && state.map) {
@@ -560,7 +762,10 @@ function savePreviewProperty() {
 }
 
 function loadPreviewIntoForm() {
-  if (!state.previewProperty) return;
+  if (!state.previewProperty) {
+    return;
+  }
+
   elements.propertyForm.address.value = state.previewProperty.address || "";
   elements.propertyForm.leadName.value = "";
   elements.propertyForm.status.value = state.previewProperty.status || "upcoming";
@@ -573,12 +778,16 @@ function loadPreviewIntoForm() {
 }
 
 function openPreviewPopup() {
-  if (!state.previewProperty || !state.map) return;
+  if (!state.previewProperty || !state.map) {
+    return;
+  }
+
   if (state.previewPopup) {
     state.map.closePopup(state.previewPopup);
     state.previewPopup.remove();
     state.previewPopup = null;
   }
+
   const preview = state.previewProperty;
   const content = `
     <div class="map-preview-popup">
@@ -591,6 +800,7 @@ function openPreviewPopup() {
       <button type="button" class="map-button map-button-primary map-popup-save" data-popup-save-preview>Save on Map</button>
     </div>
   `;
+
   const popup = L.popup({
     closeButton: true,
     autoClose: false,
@@ -606,23 +816,33 @@ function openPreviewPopup() {
   window.requestAnimationFrame(() => {
     const popupElement = popup.getElement();
     const popupRoot = popupElement?.querySelector(".map-preview-popup");
-    if (!popupRoot) return;
+    if (!popupRoot) {
+      return;
+    }
+
     popupRoot.querySelectorAll("[data-popup-preview-status]").forEach((button) => {
       button.addEventListener("click", () => {
         setPreviewStatus(button.getAttribute("data-popup-preview-status") || "upcoming");
         openPreviewPopup();
       });
     });
+
     popupRoot.querySelector("[data-popup-save-preview]")?.addEventListener("click", () => {
-      savePreviewProperty();
+      void savePreviewProperty();
     });
   });
 }
 
 function refreshBuildingStyles() {
-  if (!state.buildingLayer) return;
+  if (!state.buildingLayer) {
+    return;
+  }
+
   state.buildingLayer.eachLayer((layer) => {
-    if (!layer.__centroid) return;
+    if (!layer.__centroid) {
+      return;
+    }
+
     const previewMatch = isBuildingMatch(layer, state.previewProperty);
     const propertyMatch = state.properties.find((entry) => isBuildingMatch(layer, entry));
     const activeStatus = previewMatch ? state.previewProperty?.status : propertyMatch?.status;
@@ -633,11 +853,25 @@ function refreshBuildingStyles() {
 
 function getBuildingStyle(status, isSelected) {
   const palette = {
-    upcoming: { color: "rgba(205, 168, 83, 0.96)", fillColor: "rgba(205, 168, 83, 0.72)" },
-    visited: { color: "rgba(102, 147, 95, 0.96)", fillColor: "rgba(102, 147, 95, 0.72)" },
-    "under-contract": { color: "rgba(190, 86, 86, 0.98)", fillColor: "rgba(190, 86, 86, 0.74)" }
+    upcoming: {
+      color: "rgba(205, 168, 83, 0.96)",
+      fillColor: "rgba(205, 168, 83, 0.72)"
+    },
+    visited: {
+      color: "rgba(102, 147, 95, 0.96)",
+      fillColor: "rgba(102, 147, 95, 0.72)"
+    },
+    "under-contract": {
+      color: "rgba(190, 86, 86, 0.98)",
+      fillColor: "rgba(190, 86, 86, 0.74)"
+    }
   };
-  const colors = palette[status] || { color: "rgba(138, 75, 58, 0.18)", fillColor: "rgba(138, 75, 58, 0.08)" };
+
+  const colors = palette[status] || {
+    color: "rgba(138, 75, 58, 0.18)",
+    fillColor: "rgba(138, 75, 58, 0.08)"
+  };
+
   return {
     color: colors.color,
     weight: isSelected ? 2.8 : 1.6,
@@ -647,30 +881,45 @@ function getBuildingStyle(status, isSelected) {
 }
 
 function isLocationMatch(centroid, entry) {
-  if (!centroid || !entry || typeof entry.lat !== "number" || typeof entry.lng !== "number") return false;
+  if (!centroid || !entry || typeof entry.lat !== "number" || typeof entry.lng !== "number") {
+    return false;
+  }
+
   return Math.abs(centroid.lat - entry.lat) <= 0.00045 && Math.abs(centroid.lng - entry.lng) <= 0.00045;
 }
 
 function isBuildingMatch(layer, entry) {
-  if (!layer || !entry) return false;
+  if (!layer || !entry) {
+    return false;
+  }
+
   if (entry.buildingKey && layer.__buildingKey) {
     return entry.buildingKey === layer.__buildingKey;
   }
+
   return isLocationMatch(layer.__centroid, entry);
 }
 
 function findNearestBuildingLayer(lat, lng) {
-  if (!state.buildingLayer) return null;
+  if (!state.buildingLayer) {
+    return null;
+  }
+
   let closest = null;
   let closestDistance = Infinity;
+
   state.buildingLayer.eachLayer((layer) => {
-    if (!layer.__centroid) return;
+    if (!layer.__centroid) {
+      return;
+    }
+
     const distance = Math.hypot(layer.__centroid.lat - lat, layer.__centroid.lng - lng);
     if (distance < closestDistance) {
       closestDistance = distance;
       closest = layer;
     }
   });
+
   return closestDistance <= 0.0012 ? closest : null;
 }
 
@@ -738,11 +987,18 @@ function escapeHtml(value) {
 }
 
 function getPolygonCentroid(latLngs) {
-  if (!Array.isArray(latLngs) || !latLngs.length) return null;
+  if (!Array.isArray(latLngs) || !latLngs.length) {
+    return null;
+  }
+
   const totals = latLngs.reduce((acc, [lat, lng]) => {
     acc.lat += Number(lat);
     acc.lng += Number(lng);
     return acc;
   }, { lat: 0, lng: 0 });
-  return { lat: totals.lat / latLngs.length, lng: totals.lng / latLngs.length };
+
+  return {
+    lat: totals.lat / latLngs.length,
+    lng: totals.lng / latLngs.length
+  };
 }

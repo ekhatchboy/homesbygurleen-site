@@ -57,7 +57,15 @@ function initializeMap() {
   loadBuildingFootprints();
 }
 
-function loadProperties() {
+async function loadProperties() {
+  const remoteProperties = await loadPropertiesFromSheet_();
+  if (remoteProperties) {
+    state.properties = remoteProperties;
+    state.selectedId = state.properties[0]?.id || "";
+    render();
+    return;
+  }
+
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     state.properties = raw ? JSON.parse(raw) : [];
@@ -70,6 +78,85 @@ function loadProperties() {
 
 function saveProperties() {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.properties));
+}
+
+async function loadPropertiesFromSheet_() {
+  try {
+    const response = await fetch(`/crm/map-homes?ts=${Date.now()}`, {
+      cache: "no-store"
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload?.ok || !Array.isArray(payload.homes)) {
+      return null;
+    }
+
+    return payload.homes.map(mapHomeRecordToProperty_);
+  } catch {
+    return null;
+  }
+}
+
+async function savePropertyToSheet_(property) {
+  const response = await fetch("/crm/map-update", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "upsertMapHome",
+      propertyId: property.id,
+      address: property.address,
+      leadName: property.leadName,
+      status: property.status,
+      visitDate: property.visitDate,
+      notes: property.notes,
+      lat: property.lat,
+      lng: property.lng,
+      buildingKey: property.buildingKey,
+      showInList: property.showInList !== false
+    })
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.ok || !payload.home) {
+    throw new Error(payload?.error || "Unable to save home.");
+  }
+
+  return mapHomeRecordToProperty_(payload.home);
+}
+
+async function deletePropertyFromSheet_(propertyId) {
+  const response = await fetch("/crm/map-update", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action: "deleteMapHome",
+      propertyId
+    })
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.ok) {
+    throw new Error(payload?.error || "Unable to delete home.");
+  }
+}
+
+function mapHomeRecordToProperty_(record) {
+  return {
+    id: String(record["Property ID"] || record.propertyId || crypto.randomUUID()),
+    address: String(record["Address"] || record.address || "").trim(),
+    leadName: String(record["Lead / Client"] || record.leadName || "").trim(),
+    status: String(record["Status"] || record.status || "upcoming").trim() || "upcoming",
+    visitDate: String(record["Visit Date"] || record.visitDate || "").trim(),
+    notes: String(record["Notes"] || record.notes || "").trim(),
+    lat: Number(record["Latitude"] || record.lat || "") || 0,
+    lng: Number(record["Longitude"] || record.lng || "") || 0,
+    buildingKey: String(record["Building Key"] || record.buildingKey || "").trim(),
+    showInList: String(record["Show In List"] || record.showInList || "Yes").trim().toLowerCase() !== "no"
+  };
 }
 
 function render() {
@@ -131,7 +218,7 @@ function renderPropertyList() {
   elements.propertyList.querySelectorAll("[data-delete-list-property]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      deleteProperty(button.getAttribute("data-delete-list-property") || "");
+      void deleteProperty(button.getAttribute("data-delete-list-property") || "");
     });
   });
 }
@@ -333,7 +420,9 @@ function renderPropertyDetail() {
           setPreviewStatus(button.getAttribute("data-preview-status") || "upcoming");
         });
       });
-      elements.propertyDetailCard.querySelector("[data-save-preview]")?.addEventListener("click", savePreviewProperty);
+      elements.propertyDetailCard.querySelector("[data-save-preview]")?.addEventListener("click", () => {
+        void savePreviewProperty();
+      });
       elements.propertyDetailCard.querySelector("[data-load-preview]")?.addEventListener("click", () => loadPreviewIntoForm());
       return;
     }
@@ -372,7 +461,9 @@ function renderPropertyDetail() {
   document.querySelector("[data-open-map]")?.addEventListener("click", () => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`, "_blank");
   });
-  document.querySelector("[data-delete-property]")?.addEventListener("click", () => deleteProperty(property.id));
+  document.querySelector("[data-delete-property]")?.addEventListener("click", () => {
+    void deleteProperty(property.id);
+  });
 }
 
 function renderStatusPill(status) {
@@ -426,12 +517,28 @@ async function handlePropertySubmit(event) {
       existing.notes = notes;
       existing.lat = location.lat;
       existing.lng = location.lng;
+      existing.showInList = true;
+      existing.buildingKey = existing.buildingKey || "";
+      const savedProperty = await savePropertyToSheet_(existing);
+      Object.assign(existing, savedProperty);
       state.selectedId = existing.id;
       elements.mapStatusText.textContent = "Property updated.";
     } else {
-      const property = { id: crypto.randomUUID(), address, leadName, status, visitDate, notes, lat: location.lat, lng: location.lng };
-      state.properties.unshift(property);
-      state.selectedId = property.id;
+      const property = {
+        id: crypto.randomUUID(),
+        address,
+        leadName,
+        status,
+        visitDate,
+        notes,
+        lat: location.lat,
+        lng: location.lng,
+        buildingKey: "",
+        showInList: true
+      };
+      const savedProperty = await savePropertyToSheet_(property);
+      state.properties.unshift(savedProperty);
+      state.selectedId = savedProperty.id;
       elements.mapStatusText.textContent = "Property added to your map.";
     }
 
@@ -515,10 +622,16 @@ function loadPropertyIntoForm(property) {
   document.querySelector("#propertyAddress")?.focus();
 }
 
-function deleteProperty(propertyId) {
+async function deleteProperty(propertyId) {
   const property = state.properties.find((entry) => entry.id === propertyId);
   if (!property) return;
   if (!window.confirm(`Delete ${property.address} from your property map?`)) return;
+  try {
+    await deletePropertyFromSheet_(propertyId);
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to delete property.";
+    return;
+  }
   state.properties = state.properties.filter((entry) => entry.id !== propertyId);
   if (state.selectedId === propertyId) state.selectedId = state.properties[0]?.id || "";
   saveProperties();
@@ -599,7 +712,7 @@ function setPreviewStatus(status) {
   elements.mapStatusText.textContent = "Preview house color updated.";
 }
 
-function savePreviewProperty() {
+async function savePreviewProperty() {
   if (!state.previewProperty) {
     return;
   }
@@ -616,8 +729,10 @@ function savePreviewProperty() {
     if (preview.status === "visited" && !existing.visitDate) {
       existing.visitDate = new Date().toISOString().slice(0, 10);
     }
+    const savedExisting = await savePropertyToSheet_(existing);
+    Object.assign(existing, savedExisting);
   } else {
-    state.properties.unshift({
+    const savedProperty = await savePropertyToSheet_({
       id: crypto.randomUUID(),
       address: preview.address,
       leadName: "",
@@ -629,6 +744,7 @@ function savePreviewProperty() {
       buildingKey: preview.buildingKey || "",
       showInList: false
     });
+    state.properties.unshift(savedProperty);
   }
 
   state.selectedId = "";
@@ -712,7 +828,7 @@ function openPreviewPopup() {
     });
 
     popupRoot.querySelector("[data-popup-save-preview]")?.addEventListener("click", () => {
-      savePreviewProperty();
+      void savePreviewProperty();
     });
   });
 }

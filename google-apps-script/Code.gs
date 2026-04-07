@@ -1,5 +1,6 @@
 const MASTER_SHEET_NAME = "Master Leads";
 const GUIDE_SHEET_NAME = "Follow-Up Guide";
+const HOME_MAP_SHEET_NAME = "Home Map";
 const MASTER_HEADER_ROW = [
   "Lead ID",
   "Date",
@@ -33,10 +34,24 @@ const MASTER_HEADER_ROW = [
   "Seller Contract Signed Date",
   "Seller Contract Expiration Date"
 ];
+const HOME_MAP_HEADER_ROW = [
+  "Property ID",
+  "Address",
+  "Lead / Client",
+  "Status",
+  "Visit Date",
+  "Notes",
+  "Latitude",
+  "Longitude",
+  "Building Key",
+  "Show In List",
+  "Updated At"
+];
 
 function setupSheets() {
   const masterSheet = getMasterLeadSheet_();
   ensureGuideSheet_();
+  ensureHomeMapSheet_();
   formatMasterLeadSheet_(masterSheet);
 }
 
@@ -163,6 +178,16 @@ function doGet(e) {
       });
     }
 
+    if (mode === "mapHomes") {
+      authorizeCrm_(e);
+      setupSheets();
+
+      return jsonResponse_({
+        ok: true,
+        homes: getHomeMapRecords_()
+      });
+    }
+
     return jsonResponse_({
       ok: true,
       message: "Homes By Gurleen CRM web app is running."
@@ -210,6 +235,26 @@ function doPost(e) {
       return jsonResponse_({
         ok: true,
         leadId: handleLeadDelete_(payload)
+      });
+    }
+
+    if (action === "upsertMapHome") {
+      authorizeCrm_(e, payload);
+      setupSheets();
+
+      return jsonResponse_({
+        ok: true,
+        home: handleMapHomeUpsert_(payload)
+      });
+    }
+
+    if (action === "deleteMapHome") {
+      authorizeCrm_(e, payload);
+      setupSheets();
+
+      return jsonResponse_({
+        ok: true,
+        propertyId: handleMapHomeDelete_(payload)
       });
     }
 
@@ -505,6 +550,35 @@ function ensureGuideSheet_() {
   [3, 9, 15, 20, 25, 31, 36, 41].forEach((row) => {
     sheet.getRange(row, 1, 1, 2).setFontWeight("bold").setBackground("#f1e6d6");
   });
+}
+
+function ensureHomeMapSheet_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(HOME_MAP_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(HOME_MAP_SHEET_NAME);
+  }
+
+  const maxColumns = sheet.getMaxColumns();
+  if (maxColumns < HOME_MAP_HEADER_ROW.length) {
+    sheet.insertColumnsAfter(maxColumns, HOME_MAP_HEADER_ROW.length - maxColumns);
+  }
+
+  sheet.getRange(1, 1, 1, HOME_MAP_HEADER_ROW.length).setValues([HOME_MAP_HEADER_ROW]);
+
+  if (sheet.getLastRow() < 1) {
+    sheet.appendRow(HOME_MAP_HEADER_ROW);
+  }
+
+  const headerRange = sheet.getRange(1, 1, 1, HOME_MAP_HEADER_ROW.length);
+  headerRange
+    .setFontWeight("bold")
+    .setBackground("#f1e6d6")
+    .setFontColor("#241b18");
+
+  sheet.setFrozenRows(1);
+  sheet.autoResizeColumns(1, HOME_MAP_HEADER_ROW.length);
 }
 
 function backfillBuyerResponses() {
@@ -1103,6 +1177,83 @@ function getLeadRecords_() {
       record._rowNumber = index + 2;
       return record;
     });
+}
+
+function getHomeMapSheet_() {
+  ensureHomeMapSheet_();
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOME_MAP_SHEET_NAME);
+}
+
+function getHomeMapRecords_() {
+  const sheet = getHomeMapSheet_();
+  const values = sheet.getDataRange().getValues();
+
+  if (values.length < 2) {
+    return [];
+  }
+
+  const headers = values[0];
+  return values.slice(1)
+    .filter((row) => row.some((value) => String(value || "").trim()))
+    .map((row, index) => {
+      const record = {};
+      headers.forEach((header, headerIndex) => {
+        record[header] = row[headerIndex] || "";
+      });
+      record._rowNumber = index + 2;
+      record["Show In List"] = String(record["Show In List"] || "Yes").trim() || "Yes";
+      return record;
+    });
+}
+
+function handleMapHomeUpsert_(payload) {
+  const sheet = getHomeMapSheet_();
+  const headers = HOME_MAP_HEADER_ROW.slice();
+  const propertyId = String(payload.propertyId || payload["Property ID"] || "").trim() || `HOME-${Utilities.getUuid().slice(0, 8).toUpperCase()}`;
+  const records = getHomeMapRecords_();
+  const existing = records.find((entry) => String(entry["Property ID"] || "").trim() === propertyId);
+
+  const nextRecord = {
+    "Property ID": propertyId,
+    "Address": String(payload.address || payload["Address"] || "").trim(),
+    "Lead / Client": String(payload.leadName || payload["Lead / Client"] || "").trim(),
+    "Status": String(payload.status || payload["Status"] || "upcoming").trim() || "upcoming",
+    "Visit Date": normalizeIncomingDate_(payload.visitDate || payload["Visit Date"]),
+    "Notes": String(payload.notes || payload["Notes"] || "").trim(),
+    "Latitude": Number(payload.lat || payload["Latitude"] || "") || "",
+    "Longitude": Number(payload.lng || payload["Longitude"] || "") || "",
+    "Building Key": String(payload.buildingKey || payload["Building Key"] || "").trim(),
+    "Show In List": String(payload.showInList === false || String(payload["Show In List"] || "").trim().toLowerCase() === "no" ? "No" : "Yes"),
+    "Updated At": new Date().toISOString()
+  };
+
+  if (existing && existing._rowNumber) {
+    const rowValues = headers.map((header) => nextRecord[header] || "");
+    sheet.getRange(existing._rowNumber, 1, 1, headers.length).setValues([rowValues]);
+    return getHomeMapRecords_().find((entry) => entry["Property ID"] === propertyId) || nextRecord;
+  }
+
+  const rowValues = headers.map((header) => nextRecord[header] || "");
+  sheet.appendRow(rowValues);
+  return getHomeMapRecords_().find((entry) => entry["Property ID"] === propertyId) || nextRecord;
+}
+
+function handleMapHomeDelete_(payload) {
+  const propertyId = String(payload.propertyId || "").trim();
+  if (!propertyId) {
+    throw new Error("Missing propertyId");
+  }
+
+  const sheet = getHomeMapSheet_();
+  const records = getHomeMapRecords_();
+  const existing = records.find((entry) => String(entry["Property ID"] || "").trim() === propertyId);
+
+  if (!existing || !existing._rowNumber) {
+    throw new Error("Home not found");
+  }
+
+  sheet.deleteRow(existing._rowNumber);
+  return propertyId;
 }
 
 function handleLeadUpdate_(payload) {
