@@ -657,7 +657,7 @@ async function handlePropertySearch() {
 async function geocodeAddress(address) {
   const baseQuery = String(address || "").trim();
   const californiaQuery = /california|,\s*ca\b/i.test(baseQuery) ? baseQuery : `${baseQuery}, CA`;
-  const queries = [
+  const nominatimQueries = [
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(californiaQuery)}`,
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&state=California&q=${encodeURIComponent(californiaQuery)}`,
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&q=${encodeURIComponent(californiaQuery)}`,
@@ -666,7 +666,7 @@ async function geocodeAddress(address) {
 
   let lastError = null;
 
-  for (const url of queries) {
+  for (const url of nominatimQueries) {
     try {
       const response = await fetch(url, {
         headers: { "Accept": "application/json" }
@@ -681,6 +681,33 @@ async function geocodeAddress(address) {
       const match = Array.isArray(results) ? results[0] : null;
       if (match) {
         return { lat: Number(match.lat), lng: Number(match.lon) };
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const censusQueries = [
+    `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(californiaQuery)}&benchmark=Public_AR_Current&format=json`,
+    `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(baseQuery)}&benchmark=Public_AR_Current&format=json`
+  ];
+
+  for (const url of censusQueries) {
+    try {
+      const response = await fetch(url, {
+        headers: { "Accept": "application/json" }
+      });
+
+      if (!response.ok) {
+        lastError = new Error("Map lookup could not reach the address service.");
+        continue;
+      }
+
+      const payload = await response.json();
+      const match = payload?.result?.addressMatches?.[0];
+      const coordinates = match?.coordinates;
+      if (coordinates && Number.isFinite(Number(coordinates.y)) && Number.isFinite(Number(coordinates.x))) {
+        return { lat: Number(coordinates.y), lng: Number(coordinates.x) };
       }
     } catch (error) {
       lastError = error;
