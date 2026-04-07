@@ -114,6 +114,10 @@ body {
   cursor: pointer;
 }
 .map-status-button.is-active { border-color: rgba(138, 75, 58, 0.34); background: rgba(138, 75, 58, 0.14); color: var(--accent-dark); }
+.map-preview-popup { min-width: 220px; }
+.map-preview-popup strong { display: block; margin-bottom: 10px; line-height: 1.35; }
+.map-preview-popup .map-preview-actions { margin-bottom: 12px; }
+.map-popup-save { width: 100%; min-height: 40px; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgba(255, 250, 243, 0.96); }
 .property-marker-house {
   position: relative;

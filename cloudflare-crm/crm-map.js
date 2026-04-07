@@ -539,9 +539,11 @@ function showPreviewMarker(location, address) {
   state.selectedId = "";
   renderPropertyDetail();
   refreshBuildingStyles();
+  openPreviewPopup();
 }
 
 function clearPreviewMarker() {
+  state.map?.closePopup();
   state.previewMarker = null;
   state.previewProperty = null;
   refreshBuildingStyles();
@@ -598,6 +600,53 @@ function loadPreviewIntoForm() {
   syncSubmitButton(false, "Add property");
   elements.mapStatusText.textContent = "Preview house loaded into the form.";
   document.querySelector("#propertyAddress")?.focus();
+}
+
+function openPreviewPopup() {
+  if (!state.previewProperty || !state.map) {
+    return;
+  }
+
+  const preview = state.previewProperty;
+  const content = `
+    <div class="map-preview-popup">
+      <strong>${escapeHtml(preview.address)}</strong>
+      <div class="map-preview-actions">
+        <button type="button" class="map-status-button${preview.status === "upcoming" ? " is-active" : ""}" data-popup-preview-status="upcoming">Gold</button>
+        <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-popup-preview-status="visited">Green</button>
+        <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-popup-preview-status="under-contract">Red</button>
+      </div>
+      <button type="button" class="map-button map-button-primary map-popup-save" data-popup-save-preview>Save on Map</button>
+    </div>
+  `;
+
+  L.popup({
+    closeButton: true,
+    autoClose: false,
+    closeOnClick: false,
+    className: "map-preview-leaflet-popup"
+  })
+    .setLatLng([preview.lat, preview.lng])
+    .setContent(content)
+    .openOn(state.map);
+
+  window.setTimeout(() => {
+    const popupRoot = document.querySelector(".map-preview-popup");
+    if (!popupRoot) {
+      return;
+    }
+
+    popupRoot.querySelectorAll("[data-popup-preview-status]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setPreviewStatus(button.getAttribute("data-popup-preview-status") || "upcoming");
+        openPreviewPopup();
+      });
+    });
+
+    popupRoot.querySelector("[data-popup-save-preview]")?.addEventListener("click", () => {
+      savePreviewProperty();
+    });
+  }, 0);
 }
 
 function refreshBuildingStyles() {
