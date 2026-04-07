@@ -29,7 +29,7 @@ function initialize() {
 }
 
 function initializeMap() {
-  state.map = L.map("propertyMap", { zoomControl: true }).setView([37.3022, -120.4829], 11);
+  state.map = L.map("propertyMap", { zoomControl: true }).setView([37.3869, -120.7235], 14);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(state.map);
@@ -120,6 +120,24 @@ function renderPropertyList() {
 
 function renderMapMarkers() {
   state.markerLayer.clearLayers();
+  const visible = getFilteredProperties();
+  visible.forEach((property) => {
+    if (typeof property.lat !== "number" || typeof property.lng !== "number") return;
+    const icon = L.divIcon({
+      className: "",
+      html: renderMarkerIcon(property),
+      iconSize: [34, 40],
+      iconAnchor: [17, 34],
+      popupAnchor: [0, -26]
+    });
+    const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
+    marker.bindPopup(`<strong>${escapeHtml(property.address)}</strong><br>${escapeHtml(property.leadName || "No lead linked yet")}<br>${escapeHtml(readableStatus(property.status))}`);
+    marker.on("click", () => {
+      state.selectedId = property.id;
+      state.previewProperty = null;
+      renderPropertyDetail();
+    });
+  });
   refreshBuildingStyles();
 }
 
@@ -194,8 +212,8 @@ async function handleBuildingClick(latLngs, polygon) {
   try {
     const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
     document.querySelector("#propertyAddress").value = address;
-    showPreviewMarker(centroid, address);
-    elements.mapStatusText.textContent = "House selected from the base map. Add notes or save it when you're ready.";
+    state.map.setView([centroid.lat, centroid.lng], 17, { animate: true });
+    elements.mapStatusText.textContent = "House selected on the map. Add details and save it when you're ready.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that house yet.";
   }
@@ -208,8 +226,7 @@ async function handleMapClickPreview(event) {
   try {
     const address = await reverseGeocodeLatLng(event.latlng.lat, event.latlng.lng);
     document.querySelector("#propertyAddress").value = address;
-    showPreviewMarker({ lat: event.latlng.lat, lng: event.latlng.lng }, address);
-    elements.mapStatusText.textContent = "Address previewed from the map. Save it when you're ready.";
+    elements.mapStatusText.textContent = "Address selected from the map. Save it when you're ready.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
   }
@@ -366,8 +383,10 @@ async function handlePropertySearch() {
   elements.mapStatusText.textContent = "Searching that address on the map.";
   try {
     const location = await geocodeAddress(address);
-    showPreviewMarker(location, address);
-    elements.mapStatusText.textContent = "Address previewed on the map. Save it when you're ready.";
+    const normalizedAddress = await reverseGeocodeLatLng(location.lat, location.lng).catch(() => address);
+    document.querySelector("#propertyAddress").value = normalizedAddress;
+    state.map.setView([location.lat, location.lng], 17, { animate: true });
+    elements.mapStatusText.textContent = "Address found on the Livingston map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
   } finally {
@@ -376,7 +395,8 @@ async function handlePropertySearch() {
 }
 
 async function geocodeAddress(address) {
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`, { headers: { "Accept": "application/json" } });
+  const query = /livingston/i.test(address) ? address : `${address}, Livingston, CA`;
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&viewbox=-120.77,37.41,-120.67,37.34&bounded=1&q=${encodeURIComponent(query)}`, { headers: { "Accept": "application/json" } });
   if (!response.ok) throw new Error("Map lookup could not reach the address service.");
   const results = await response.json();
   const match = Array.isArray(results) ? results[0] : null;
