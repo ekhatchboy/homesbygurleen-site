@@ -419,8 +419,10 @@ async function handleMapClickPreview(event) {
 
   try {
     const address = await reverseGeocodeLatLng(event.latlng.lat, event.latlng.lng);
-    await showPreviewMarker(event.latlng, address);
-    elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
+    const matched = await showPreviewMarker(event.latlng, address);
+    elements.mapStatusText.textContent = matched
+      ? "House selected. Choose a color and save it on the map."
+      : "I found the address, but not the exact house shape. Click directly on a house footprint to color it.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
   }
@@ -742,9 +744,13 @@ function focusSelectedMarker() {
 async function showPreviewMarker(location, address) {
   clearPreviewMarker();
   const matchedBuilding = await ensureNearestBuildingLayer(location.lat, location.lng);
-  if (matchedBuilding) {
-    state.selectedBuildingLayer = matchedBuilding;
+  if (!matchedBuilding) {
+    document.querySelector("#propertyAddress").value = address;
+    state.selectedBuildingLayer = null;
+    return false;
   }
+
+  state.selectedBuildingLayer = matchedBuilding;
   state.previewProperty = {
       address,
       lat: Number(location.lat),
@@ -758,6 +764,7 @@ async function showPreviewMarker(location, address) {
   renderPropertyDetail();
   refreshBuildingStyles();
   openPreviewPopup();
+  return true;
 }
 
 function clearPreviewMarker() {
