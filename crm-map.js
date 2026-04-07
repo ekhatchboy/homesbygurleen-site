@@ -6,6 +6,7 @@ const state = {
   filter: "all",
   map: null,
   markerLayer: null,
+  savedShapeLayer: null,
   previewMarker: null,
   previewPopup: null,
   previewProperty: null,
@@ -22,6 +23,7 @@ const elements = {
   propertyList: document.querySelector("#propertyList"),
   propertyDetailCard: document.querySelector("#propertyDetailCard"),
   mapStatusText: document.querySelector("#mapStatusText"),
+  mapHoverReadout: document.querySelector("#mapHoverReadout"),
   metricTotal: document.querySelector("#mapMetricTotal"),
   metricVisited: document.querySelector("#mapMetricVisited"),
   metricUpcoming: document.querySelector("#mapMetricUpcoming")
@@ -49,6 +51,7 @@ function initializeMap() {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(state.map);
   state.markerLayer = L.layerGroup().addTo(state.map);
+  state.savedShapeLayer = L.layerGroup().addTo(state.map);
   state.buildingLayer = L.layerGroup().addTo(state.map);
   state.map.on("moveend zoomend", () => {
     loadBuildingFootprints();
@@ -110,12 +113,13 @@ async function savePropertyToSheet_(property) {
       leadName: property.leadName,
       status: property.status,
       visitDate: property.visitDate,
-      notes: property.notes,
-      lat: property.lat,
-      lng: property.lng,
-      buildingKey: property.buildingKey,
-      showInList: property.showInList !== false
-    })
+        notes: property.notes,
+        lat: property.lat,
+        lng: property.lng,
+        buildingKey: property.buildingKey,
+        shapePoints: property.shapePoints || "",
+        showInList: property.showInList !== false
+      })
   });
 
   const payload = await response.json();
@@ -151,17 +155,19 @@ function mapHomeRecordToProperty_(record) {
     leadName: String(record["Lead / Client"] || record.leadName || "").trim(),
     status: String(record["Status"] || record.status || "upcoming").trim() || "upcoming",
     visitDate: String(record["Visit Date"] || record.visitDate || "").trim(),
-    notes: String(record["Notes"] || record.notes || "").trim(),
-    lat: Number(record["Latitude"] || record.lat || "") || 0,
-    lng: Number(record["Longitude"] || record.lng || "") || 0,
-    buildingKey: String(record["Building Key"] || record.buildingKey || "").trim(),
-    showInList: String(record["Show In List"] || record.showInList || "Yes").trim().toLowerCase() !== "no"
-  };
-}
+      notes: String(record["Notes"] || record.notes || "").trim(),
+      lat: Number(record["Latitude"] || record.lat || "") || 0,
+      lng: Number(record["Longitude"] || record.lng || "") || 0,
+      buildingKey: String(record["Building Key"] || record.buildingKey || "").trim(),
+      shapePoints: String(record["Shape Points"] || record.shapePoints || "").trim(),
+      showInList: String(record["Show In List"] || record.showInList || "Yes").trim().toLowerCase() !== "no"
+    };
+  }
 
 function render() {
   renderMetrics();
   renderPropertyList();
+  renderSavedShapes();
   renderMapMarkers();
   renderPropertyDetail();
 }
@@ -250,6 +256,38 @@ function renderMapMarkers() {
   });
 
   refreshBuildingStyles();
+}
+
+function renderSavedShapes() {
+  if (!state.savedShapeLayer) {
+    return;
+  }
+
+  state.savedShapeLayer.clearLayers();
+
+  state.properties.forEach((property) => {
+    const latLngs = parseShapePoints_(property.shapePoints);
+    if (!latLngs.length) {
+      return;
+    }
+
+    const polygon = L.polygon(latLngs, getSavedShapeStyle_(property.status));
+    polygon.on("click", () => {
+      state.selectedId = property.id;
+      render();
+    });
+    polygon.on("mouseover", () => {
+      if (elements.mapHoverReadout) {
+        elements.mapHoverReadout.textContent = `${property.address} is ${readableStatus(property.status)}.`;
+      }
+    });
+    polygon.on("mouseout", () => {
+      if (elements.mapHoverReadout) {
+        elements.mapHoverReadout.textContent = "Hover a saved house shape to see its current color and status.";
+      }
+    });
+    polygon.addTo(state.savedShapeLayer);
+  });
 }
 
 async function loadBuildingFootprints() {
@@ -519,6 +557,7 @@ async function handlePropertySubmit(event) {
       existing.lng = location.lng;
       existing.showInList = true;
       existing.buildingKey = existing.buildingKey || "";
+      existing.shapePoints = existing.shapePoints || "";
       const savedProperty = await savePropertyToSheet_(existing);
       Object.assign(existing, savedProperty);
       state.selectedId = existing.id;
@@ -534,6 +573,7 @@ async function handlePropertySubmit(event) {
         lat: location.lat,
         lng: location.lng,
         buildingKey: "",
+        shapePoints: "",
         showInList: true
       };
       const savedProperty = await savePropertyToSheet_(property);
@@ -679,7 +719,8 @@ async function showPreviewMarker(location, address) {
     lat: Number(location.lat),
     lng: Number(location.lng),
     status: "upcoming",
-    buildingKey: matchedBuilding?.__buildingKey || ""
+    buildingKey: matchedBuilding?.__buildingKey || "",
+    shapePoints: matchedBuilding ? serializeShapePoints_(matchedBuilding) : ""
   };
   document.querySelector("#propertyAddress").value = address;
   state.selectedId = "";
@@ -725,6 +766,7 @@ async function savePreviewProperty() {
     existing.lat = preview.lat;
     existing.lng = preview.lng;
     existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
+    existing.shapePoints = preview.shapePoints || existing.shapePoints || "";
     existing.showInList = false;
     if (preview.status === "visited" && !existing.visitDate) {
       existing.visitDate = new Date().toISOString().slice(0, 10);
@@ -739,11 +781,12 @@ async function savePreviewProperty() {
       status: preview.status,
       visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
       notes: "",
-      lat: preview.lat,
-      lng: preview.lng,
-      buildingKey: preview.buildingKey || "",
-      showInList: false
-    });
+        lat: preview.lat,
+        lng: preview.lng,
+        buildingKey: preview.buildingKey || "",
+        shapePoints: preview.shapePoints || "",
+        showInList: false
+      });
     state.properties.unshift(savedProperty);
   }
 
@@ -880,6 +923,16 @@ function getBuildingStyle(status, isSelected) {
   };
 }
 
+function getSavedShapeStyle_(status) {
+  const base = getBuildingStyle(status, false);
+  return {
+    color: base.color,
+    weight: 2.2,
+    fillColor: base.fillColor,
+    fillOpacity: 0.82
+  };
+}
+
 function isLocationMatch(centroid, entry) {
   if (!centroid || !entry || typeof entry.lat !== "number" || typeof entry.lng !== "number") {
     return false;
@@ -954,6 +1007,35 @@ function waitForMapIdle_() {
 
 function wait_(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function serializeShapePoints_(layer) {
+  if (!layer?.getLatLngs) {
+    return "";
+  }
+
+  const raw = layer.getLatLngs();
+  const ring = Array.isArray(raw[0]) ? raw[0] : raw;
+  if (!Array.isArray(ring) || !ring.length) {
+    return "";
+  }
+
+  return ring
+    .map((point) => `${Number(point.lat).toFixed(6)},${Number(point.lng).toFixed(6)}`)
+    .join(";");
+}
+
+function parseShapePoints_(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return [];
+  }
+
+  return text.split(";")
+    .map((pair) => pair.split(","))
+    .filter((pair) => pair.length === 2)
+    .map(([lat, lng]) => [Number(lat), Number(lng)])
+    .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
 }
 
 function syncFilterButtons() {

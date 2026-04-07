@@ -62,6 +62,12 @@ body {
 .map-sidebar, .map-main { display: grid; gap: 20px; }
 .map-card-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 18px; }
 .map-card-heading h2 { margin: 0; font-size: 2rem; line-height: 1.08; }
+.map-hover-readout {
+  margin: -4px 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
 .map-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .map-form label { display: grid; gap: 8px; }
 .map-form input, .map-form select, .map-form textarea {

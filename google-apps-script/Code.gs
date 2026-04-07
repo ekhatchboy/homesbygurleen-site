@@ -44,6 +44,7 @@ const HOME_MAP_HEADER_ROW = [
   "Latitude",
   "Longitude",
   "Building Key",
+  "Shape Points",
   "Show In List",
   "Updated At"
 ];
@@ -1223,6 +1224,7 @@ function handleMapHomeUpsert_(payload) {
     "Latitude": Number(payload.lat || payload["Latitude"] || "") || "",
     "Longitude": Number(payload.lng || payload["Longitude"] || "") || "",
     "Building Key": String(payload.buildingKey || payload["Building Key"] || "").trim(),
+    "Shape Points": String(payload.shapePoints || payload["Shape Points"] || "").trim(),
     "Show In List": String(payload.showInList === false || String(payload["Show In List"] || "").trim().toLowerCase() === "no" ? "No" : "Yes"),
     "Updated At": new Date().toISOString()
   };
