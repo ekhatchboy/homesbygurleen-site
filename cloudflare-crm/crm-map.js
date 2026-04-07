@@ -5,12 +5,14 @@ const state = {
   selectedId: "",
   filter: "all",
   map: null,
-  markerLayer: null
+  markerLayer: null,
+  previewMarker: null
 };
 
 const elements = {
   propertyForm: document.querySelector("#propertyForm"),
   propertySubmitButton: document.querySelector("#propertySubmitButton"),
+  searchPropertyButton: document.querySelector("#searchPropertyButton"),
   propertyList: document.querySelector("#propertyList"),
   propertyDetailCard: document.querySelector("#propertyDetailCard"),
   mapStatusText: document.querySelector("#mapStatusText"),
@@ -25,6 +27,7 @@ function initialize() {
   initializeMap();
   loadProperties();
   elements.propertyForm?.addEventListener("submit", handlePropertySubmit);
+  elements.searchPropertyButton?.addEventListener("click", handlePropertySearch);
   document.querySelectorAll("[data-map-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.filter = button.getAttribute("data-map-filter") || "all";
@@ -82,14 +85,17 @@ function renderPropertyList() {
   }
 
   elements.propertyList.innerHTML = items.map((property) => `
-    <button type="button" class="map-property-item${property.id === state.selectedId ? " is-selected" : ""}" data-property-id="${escapeHtml(property.id)}">
-      <h3 class="map-property-title">${escapeHtml(property.address)}</h3>
+    <div class="map-property-item${property.id === state.selectedId ? " is-selected" : ""}" data-property-id="${escapeHtml(property.id)}" role="button" tabindex="0">
+      <div class="map-property-head">
+        <h3 class="map-property-title">${escapeHtml(property.address)}</h3>
+        <button type="button" class="map-property-remove" data-delete-list-property="${escapeHtml(property.id)}" aria-label="Remove property">-</button>
+      </div>
       <p class="map-property-subtitle">${escapeHtml(property.leadName || "No lead linked yet")}</p>
       <div class="map-property-meta">
         ${renderStatusPill(property.status)}
         ${property.visitDate ? `<span class="map-status-pill">${escapeHtml(formatDate(property.visitDate))}</span>` : ""}
       </div>
-    </button>
+    </div>
   `).join("");
 
   elements.propertyList.querySelectorAll("[data-property-id]").forEach((button) => {
@@ -97,6 +103,21 @@ function renderPropertyList() {
       state.selectedId = button.getAttribute("data-property-id") || "";
       render();
       focusSelectedMarker();
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        state.selectedId = button.getAttribute("data-property-id") || "";
+        render();
+        focusSelectedMarker();
+      }
+    });
+  });
+
+  elements.propertyList.querySelectorAll("[data-delete-list-property]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteProperty(button.getAttribute("data-delete-list-property") || "");
     });
   });
 }
@@ -112,9 +133,10 @@ function renderMapMarkers() {
 
     const icon = L.divIcon({
       className: "",
-      html: `<div class="property-marker ${escapeHtml(property.status || "upcoming")}"></div>`,
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
+      html: renderMarkerIcon(property),
+      iconSize: [34, 40],
+      iconAnchor: [17, 34],
+      popupAnchor: [0, -26]
     });
 
     const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
@@ -178,6 +200,20 @@ function renderStatusPill(status) {
   return `<span class="map-status-pill ${escapeHtml(status || "upcoming")}">${escapeHtml(readableStatus(status))}</span>`;
 }
 
+function renderMarkerIcon(property) {
+  const statusClass = escapeHtml(property.status || "upcoming");
+  const selectedClass = property.id === state.selectedId ? " is-selected" : "";
+
+  return `
+    <div class="property-marker-house ${statusClass}${selectedClass}">
+      <span class="property-marker-roof"></span>
+      <span class="property-marker-body"></span>
+      <span class="property-marker-door"></span>
+      <span class="property-marker-chimney"></span>
+    </div>
+  `;
+}
+
 function readableStatus(status) {
   if (status === "visited") return "Visited";
   if (status === "under-contract") return "Under Contract";
@@ -221,6 +257,7 @@ async function handlePropertySubmit(event) {
     }
 
     saveProperties();
+    clearPreviewMarker();
     elements.propertyForm.reset();
     delete elements.propertyForm.dataset.editId;
     syncSubmitButton(false, "Add property");
@@ -229,6 +266,27 @@ async function handlePropertySubmit(event) {
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to map that address right now.";
     syncSubmitButton(false, editId ? "Save property" : "Add property");
+  }
+}
+
+async function handlePropertySearch() {
+  const address = String(document.querySelector("#propertyAddress")?.value || "").trim();
+  if (!address) {
+    elements.mapStatusText.textContent = "Enter an address first, then search it on the map.";
+    return;
+  }
+
+  syncSearchButton(true);
+  elements.mapStatusText.textContent = "Searching that address on the map.";
+
+  try {
+    const location = await geocodeAddress(address);
+    showPreviewMarker(location, address);
+    elements.mapStatusText.textContent = "Address previewed on the map. Save it when you're ready.";
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
+  } finally {
+    syncSearchButton(false);
   }
 }
 
@@ -272,6 +330,26 @@ function focusSelectedMarker() {
   state.map.setView([property.lat, property.lng], 15, { animate: true });
 }
 
+function showPreviewMarker(location, address) {
+  clearPreviewMarker();
+  const icon = L.divIcon({
+    className: "",
+    html: renderMarkerIcon({ id: "preview", status: "preview" }),
+    iconSize: [34, 40],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -26]
+  });
+  state.previewMarker = L.marker([location.lat, location.lng], { icon }).addTo(state.map);
+  state.previewMarker.bindPopup(`<strong>${escapeHtml(address)}</strong><br>Preview only`).openPopup();
+  state.map.setView([location.lat, location.lng], 15, { animate: true });
+}
+
+function clearPreviewMarker() {
+  if (!state.previewMarker) return;
+  state.map.removeLayer(state.previewMarker);
+  state.previewMarker = null;
+}
+
 function syncFilterButtons() {
   document.querySelectorAll("[data-map-filter]").forEach((button) => {
     button.classList.toggle("is-active", button.getAttribute("data-map-filter") === state.filter);
@@ -281,6 +359,12 @@ function syncFilterButtons() {
 function syncSubmitButton(isBusy, label) {
   elements.propertySubmitButton.disabled = isBusy;
   elements.propertySubmitButton.textContent = label;
+}
+
+function syncSearchButton(isBusy) {
+  if (!elements.searchPropertyButton) return;
+  elements.searchPropertyButton.disabled = isBusy;
+  elements.searchPropertyButton.textContent = isBusy ? "Searching..." : "Search on Map";
 }
 
 function formatDate(value) {
