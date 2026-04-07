@@ -38,6 +38,7 @@ function initializeMap() {
   state.map.on("moveend zoomend", () => {
     loadBuildingFootprints();
   });
+  state.map.on("click", handleMapClickPreview);
   loadBuildingFootprints();
 }
 
@@ -198,6 +199,7 @@ out skel qt;
       });
 
       polygon.on("click", async () => {
+        state.suppressMapClickUntil = Date.now() + 400;
         await handleBuildingClick(latLngs, polygon);
       });
 
@@ -219,6 +221,20 @@ async function handleBuildingClick(latLngs, polygon) {
     elements.mapStatusText.textContent = "House selected from the base map. Add notes or save it when you're ready.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that house yet.";
+  }
+}
+
+async function handleMapClickPreview(event) {
+  if (!event?.latlng) return;
+  if (Date.now() < (state.suppressMapClickUntil || 0)) return;
+  elements.mapStatusText.textContent = "Checking the nearest address on the map.";
+  try {
+    const address = await reverseGeocodeLatLng(event.latlng.lat, event.latlng.lng);
+    document.querySelector("#propertyAddress").value = address;
+    showPreviewMarker({ lat: event.latlng.lat, lng: event.latlng.lng }, address);
+    elements.mapStatusText.textContent = "Address previewed from the map. Save it when you're ready.";
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
   }
 }
 
