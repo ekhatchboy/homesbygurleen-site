@@ -703,6 +703,8 @@ async function clearPropertyColor(propertyId) {
     return;
   }
 
+  state.selectedBuildingLayer = null;
+  clearPreviewMarker();
   render();
   elements.mapStatusText.textContent = "House color cleared from the map.";
 }
@@ -904,13 +906,12 @@ function openPreviewPopup() {
         return;
       }
 
-      const existing = state.properties.find((entry) =>
-        isBuildingMatch(state.selectedBuildingLayer, entry) || isLocationMatch(state.previewProperty, entry)
-      );
+      const existing = findMatchingPropertyForPreview_();
 
       if (existing) {
         await clearPropertyColor(existing.id);
       } else {
+        state.selectedBuildingLayer = null;
         clearPreviewMarker();
         render();
         elements.mapStatusText.textContent = "Preview color cleared.";
@@ -1083,6 +1084,25 @@ function parseShapePoints_(value) {
     .filter((pair) => pair.length === 2)
     .map(([lat, lng]) => [Number(lat), Number(lng)])
     .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+}
+
+function findMatchingPropertyForPreview_() {
+  if (!state.previewProperty) {
+    return null;
+  }
+
+  const preview = state.previewProperty;
+  return state.properties.find((entry) => {
+    if (preview.buildingKey && entry.buildingKey && preview.buildingKey === entry.buildingKey) {
+      return true;
+    }
+
+    if (preview.address && entry.address && String(preview.address).trim() === String(entry.address).trim()) {
+      return true;
+    }
+
+    return isBuildingMatch(state.selectedBuildingLayer, entry) || isLocationMatch(preview, entry);
+  }) || null;
 }
 
 function syncFilterButtons() {
