@@ -211,7 +211,7 @@ async function handleBuildingClick(latLngs, polygon) {
   elements.mapStatusText.textContent = "Looking up that house so you can color it on the map.";
   try {
     const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
-    showPreviewMarker(centroid, address);
+    await showPreviewMarker(centroid, address);
     elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that house yet.";
@@ -224,7 +224,7 @@ async function handleMapClickPreview(event) {
   elements.mapStatusText.textContent = "Checking the nearest address on the map.";
   try {
     const address = await reverseGeocodeLatLng(event.latlng.lat, event.latlng.lng);
-    showPreviewMarker(event.latlng, address);
+    await showPreviewMarker(event.latlng, address);
     elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
@@ -384,7 +384,8 @@ async function handlePropertySearch() {
     const location = await geocodeAddress(address);
     const normalizedAddress = await reverseGeocodeLatLng(location.lat, location.lng).catch(() => address);
     state.map.setView([location.lat, location.lng], 17, { animate: true });
-    showPreviewMarker(location, normalizedAddress);
+    await waitForMapIdle_();
+    await showPreviewMarker(location, normalizedAddress);
     elements.mapStatusText.textContent = "Address found. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
@@ -466,9 +467,9 @@ function focusSelectedMarker() {
   refreshBuildingStyles();
 }
 
-function showPreviewMarker(location, address) {
+async function showPreviewMarker(location, address) {
   clearPreviewMarker();
-  const matchedBuilding = findNearestBuildingLayer(location.lat, location.lng);
+  const matchedBuilding = await ensureNearestBuildingLayer(location.lat, location.lng);
   if (matchedBuilding) {
     state.selectedBuildingLayer = matchedBuilding;
   }
@@ -661,7 +662,40 @@ function findNearestBuildingLayer(lat, lng) {
       closest = layer;
     }
   });
-  return closestDistance <= 0.0008 ? closest : null;
+  return closestDistance <= 0.0012 ? closest : null;
+}
+
+async function ensureNearestBuildingLayer(lat, lng) {
+  let matchedBuilding = findNearestBuildingLayer(lat, lng);
+  if (matchedBuilding) {
+    return matchedBuilding;
+  }
+
+  await loadBuildingFootprints();
+  matchedBuilding = findNearestBuildingLayer(lat, lng);
+  if (matchedBuilding) {
+    return matchedBuilding;
+  }
+
+  await wait_(250);
+  matchedBuilding = findNearestBuildingLayer(lat, lng);
+  return matchedBuilding;
+}
+
+function waitForMapIdle_() {
+  return new Promise((resolve) => {
+    if (!state.map) {
+      resolve();
+      return;
+    }
+    state.map.once("moveend", () => {
+      resolve();
+    });
+  });
+}
+
+function wait_(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function syncFilterButtons() {
