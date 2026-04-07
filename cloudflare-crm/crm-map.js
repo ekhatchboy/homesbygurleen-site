@@ -7,6 +7,7 @@ const state = {
   map: null,
   markerLayer: null,
   previewMarker: null,
+  previewPopup: null,
   previewProperty: null,
   buildingLayer: null,
   selectedBuildingLayer: null,
@@ -220,6 +221,7 @@ out skel qt;
         fillColor: "rgba(138, 75, 58, 0.08)",
         fillOpacity: 0.22
       });
+      polygon.__buildingKey = String(element.id || `${latLngs[0][0]}:${latLngs[0][1]}`);
       polygon.__centroid = getPolygonCentroid(latLngs);
 
       polygon.on("click", async () => {
@@ -531,11 +533,16 @@ function focusSelectedMarker() {
 
 function showPreviewMarker(location, address) {
   clearPreviewMarker();
+  const matchedBuilding = findNearestBuildingLayer(location.lat, location.lng);
+  if (matchedBuilding) {
+    state.selectedBuildingLayer = matchedBuilding;
+  }
   state.previewProperty = {
     address,
     lat: Number(location.lat),
     lng: Number(location.lng),
-    status: "upcoming"
+    status: "upcoming",
+    buildingKey: matchedBuilding?.__buildingKey || ""
   };
   state.map.setView([location.lat, location.lng], 17, { animate: true });
   state.selectedId = "";
@@ -545,8 +552,12 @@ function showPreviewMarker(location, address) {
 }
 
 function clearPreviewMarker() {
+  if (state.previewPopup && state.map) {
+    state.map.removeLayer(state.previewPopup);
+  }
   state.map?.closePopup();
   state.previewMarker = null;
+  state.previewPopup = null;
   state.previewProperty = null;
   refreshBuildingStyles();
 }
@@ -568,12 +579,13 @@ function savePreviewProperty() {
   }
 
   const preview = state.previewProperty;
-  const existing = state.properties.find((entry) => isLocationMatch(preview, entry));
+  const existing = state.properties.find((entry) => isBuildingMatch(state.selectedBuildingLayer, entry) || isLocationMatch(preview, entry));
   if (existing) {
     existing.address = preview.address;
     existing.status = preview.status;
     existing.lat = preview.lat;
     existing.lng = preview.lng;
+    existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
     existing.showInList = false;
     if (preview.status === "visited" && !existing.visitDate) {
       existing.visitDate = new Date().toISOString().slice(0, 10);
@@ -588,12 +600,17 @@ function savePreviewProperty() {
       notes: "",
       lat: preview.lat,
       lng: preview.lng,
+      buildingKey: preview.buildingKey || "",
       showInList: false
     });
   }
 
   state.selectedId = "";
   saveProperties();
+  if (state.previewPopup && state.map) {
+    state.map.removeLayer(state.previewPopup);
+  }
+  state.previewPopup = null;
   state.map?.closePopup();
   clearPreviewMarker();
   render();
@@ -644,6 +661,7 @@ function openPreviewPopup() {
     .setLatLng([preview.lat, preview.lng])
     .setContent(content);
 
+  state.previewPopup = popup;
   popup.openOn(state.map);
 
   window.requestAnimationFrame(() => {
@@ -676,8 +694,8 @@ function refreshBuildingStyles() {
       return;
     }
 
-    const previewMatch = isLocationMatch(layer.__centroid, state.previewProperty);
-    const propertyMatch = state.properties.find((entry) => isLocationMatch(layer.__centroid, entry));
+    const previewMatch = isBuildingMatch(layer, state.previewProperty);
+    const propertyMatch = state.properties.find((entry) => isBuildingMatch(layer, entry));
     const activeStatus = previewMatch ? state.previewProperty?.status : propertyMatch?.status;
     const isSelected = layer === state.selectedBuildingLayer || Boolean(propertyMatch && propertyMatch.id === state.selectedId);
     layer.setStyle(getBuildingStyle(activeStatus, isSelected));
@@ -719,6 +737,41 @@ function isLocationMatch(centroid, entry) {
   }
 
   return Math.abs(centroid.lat - entry.lat) <= 0.00045 && Math.abs(centroid.lng - entry.lng) <= 0.00045;
+}
+
+function isBuildingMatch(layer, entry) {
+  if (!layer || !entry) {
+    return false;
+  }
+
+  if (entry.buildingKey && layer.__buildingKey) {
+    return entry.buildingKey === layer.__buildingKey;
+  }
+
+  return isLocationMatch(layer.__centroid, entry);
+}
+
+function findNearestBuildingLayer(lat, lng) {
+  if (!state.buildingLayer) {
+    return null;
+  }
+
+  let closest = null;
+  let closestDistance = Infinity;
+
+  state.buildingLayer.eachLayer((layer) => {
+    if (!layer.__centroid) {
+      return;
+    }
+
+    const distance = Math.hypot(layer.__centroid.lat - lat, layer.__centroid.lng - lng);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = layer;
+    }
+  });
+
+  return closestDistance <= 0.0008 ? closest : null;
 }
 
 function syncFilterButtons() {
