@@ -187,6 +187,33 @@ body {
   background: rgba(255, 255, 255, 0.66);
   white-space: pre-wrap;
 }
+.map-detail-copy {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.map-preview-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.map-status-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(64, 38, 26, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.map-status-button.is-active {
+  border-color: rgba(138, 75, 58, 0.34);
+  background: rgba(138, 75, 58, 0.14);
+  color: var(--accent-dark);
+}
 
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgba(255, 250, 243, 0.96); }
 .property-marker-house {

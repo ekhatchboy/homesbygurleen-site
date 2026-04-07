@@ -1,5 +1,5 @@
 const STORAGE_KEY = "hbg-property-map-v1";
-const state = { properties: [], selectedId: "", filter: "all", map: null, markerLayer: null, previewMarker: null, buildingLayer: null, selectedBuildingLayer: null, buildingFetchToken: 0 };
+const state = { properties: [], selectedId: "", filter: "all", map: null, markerLayer: null, previewMarker: null, previewProperty: null, buildingLayer: null, selectedBuildingLayer: null, buildingFetchToken: 0 };
 const elements = {
   propertyForm: document.querySelector("#propertyForm"),
   propertySubmitButton: document.querySelector("#propertySubmitButton"),
@@ -119,28 +119,7 @@ function renderPropertyList() {
 function renderMapMarkers() {
   state.markerLayer.clearLayers();
   const visible = getFilteredProperties();
-  visible.forEach((property) => {
-    if (typeof property.lat !== "number" || typeof property.lng !== "number") return;
-    const icon = L.divIcon({
-      className: "",
-      html: renderMarkerIcon(property),
-      iconSize: [34, 40],
-      iconAnchor: [17, 34],
-      popupAnchor: [0, -26]
-    });
-    const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
-    marker.bindPopup(`<strong>${escapeHtml(property.address)}</strong><br>${escapeHtml(property.leadName || "No lead linked yet")}<br>${escapeHtml(readableStatus(property.status))}`);
-    marker.on("click", () => {
-      if (state.selectedId === property.id) {
-        togglePropertyVisitStatus(property.id);
-        return;
-      }
-
-      state.selectedId = property.id;
-      renderPropertyList();
-      renderPropertyDetail();
-    });
-  });
+  refreshBuildingStyles();
   const withCoords = visible.filter((entry) => typeof entry.lat === "number" && typeof entry.lng === "number");
   if (withCoords.length === 1) {
     state.map.setView([withCoords[0].lat, withCoords[0].lng], 14);
@@ -197,6 +176,7 @@ out skel qt;
         fillColor: "rgba(138, 75, 58, 0.08)",
         fillOpacity: 0.22
       });
+      polygon.__centroid = getPolygonCentroid(latLngs);
 
       polygon.on("click", async () => {
         state.suppressMapClickUntil = Date.now() + 400;
@@ -205,6 +185,7 @@ out skel qt;
 
       polygon.addTo(state.buildingLayer);
     });
+    refreshBuildingStyles();
   } catch {
   }
 }
@@ -239,26 +220,43 @@ async function handleMapClickPreview(event) {
 }
 
 function highlightBuilding(polygon) {
-  if (state.selectedBuildingLayer) {
-    state.selectedBuildingLayer.setStyle({
-      color: "rgba(138, 75, 58, 0.18)",
-      weight: 1,
-      fillColor: "rgba(138, 75, 58, 0.08)",
-      fillOpacity: 0.22
-    });
-  }
   state.selectedBuildingLayer = polygon;
-  polygon.setStyle({
-    color: "rgba(93, 45, 37, 0.48)",
-    weight: 2,
-    fillColor: "rgba(138, 75, 58, 0.18)",
-    fillOpacity: 0.4
-  });
+  refreshBuildingStyles();
 }
 
 function renderPropertyDetail() {
   const property = state.properties.find((entry) => entry.id === state.selectedId);
   if (!property) {
+    if (state.previewProperty) {
+      const preview = state.previewProperty;
+      elements.propertyDetailCard.innerHTML = `
+        <div class="map-card-heading">
+          <div>
+            <p class="map-kicker">Previewed House</p>
+            <h3>${escapeHtml(preview.address)}</h3>
+          </div>
+          ${renderStatusPill(preview.status)}
+        </div>
+        <p class="map-detail-copy">Choose the color/status you want, then save it directly onto the map.</p>
+        <div class="map-preview-actions">
+          <button type="button" class="map-status-button${preview.status === "upcoming" ? " is-active" : ""}" data-preview-status="upcoming">Upcoming</button>
+          <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-preview-status="visited">Visited</button>
+          <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-preview-status="under-contract">Under Contract</button>
+        </div>
+        <div class="map-detail-actions">
+          <button type="button" class="map-button map-button-primary" data-save-preview>Save House to Map</button>
+          <button type="button" class="map-button map-button-secondary" data-load-preview>Load into form</button>
+        </div>
+      `;
+      elements.propertyDetailCard.querySelectorAll("[data-preview-status]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setPreviewStatus(button.getAttribute("data-preview-status") || "upcoming");
+        });
+      });
+      elements.propertyDetailCard.querySelector("[data-save-preview]")?.addEventListener("click", savePreviewProperty);
+      elements.propertyDetailCard.querySelector("[data-load-preview]")?.addEventListener("click", () => loadPreviewIntoForm());
+      return;
+    }
     elements.propertyDetailCard.innerHTML = `<div class="map-empty-state">Click a house pin or a property in the list to open its notes.</div>`;
     return;
   }
@@ -450,26 +448,102 @@ function focusSelectedMarker() {
   const property = state.properties.find((entry) => entry.id === state.selectedId);
   if (!property || typeof property.lat !== "number" || typeof property.lng !== "number") return;
   state.map.setView([property.lat, property.lng], 17, { animate: true });
+  refreshBuildingStyles();
 }
 
 function showPreviewMarker(location, address) {
   clearPreviewMarker();
-  const icon = L.divIcon({
-    className: "",
-    html: renderMarkerIcon({ id: "preview", status: "preview" }),
-    iconSize: [34, 40],
-    iconAnchor: [17, 34],
-    popupAnchor: [0, -26]
-  });
-  state.previewMarker = L.marker([location.lat, location.lng], { icon }).addTo(state.map);
-  state.previewMarker.bindPopup(`<strong>${escapeHtml(address)}</strong><br>Preview only`).openPopup();
+  state.previewProperty = {
+    address,
+    lat: Number(location.lat),
+    lng: Number(location.lng),
+    status: "upcoming"
+  };
   state.map.setView([location.lat, location.lng], 17, { animate: true });
+  state.selectedId = "";
+  renderPropertyDetail();
+  refreshBuildingStyles();
 }
 
 function clearPreviewMarker() {
-  if (!state.previewMarker) return;
-  state.map.removeLayer(state.previewMarker);
   state.previewMarker = null;
+  state.previewProperty = null;
+  refreshBuildingStyles();
+}
+
+function setPreviewStatus(status) {
+  if (!state.previewProperty) return;
+  state.previewProperty.status = status || "upcoming";
+  renderPropertyDetail();
+  refreshBuildingStyles();
+  elements.mapStatusText.textContent = "Preview house color updated.";
+}
+
+function savePreviewProperty() {
+  if (!state.previewProperty) return;
+  const preview = state.previewProperty;
+  const property = {
+    id: crypto.randomUUID(),
+    address: preview.address,
+    leadName: "",
+    status: preview.status,
+    visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
+    notes: "",
+    lat: preview.lat,
+    lng: preview.lng
+  };
+  state.properties.unshift(property);
+  state.selectedId = property.id;
+  saveProperties();
+  clearPreviewMarker();
+  render();
+  focusSelectedMarker();
+  elements.mapStatusText.textContent = "House saved to your map.";
+}
+
+function loadPreviewIntoForm() {
+  if (!state.previewProperty) return;
+  elements.propertyForm.address.value = state.previewProperty.address || "";
+  elements.propertyForm.leadName.value = "";
+  elements.propertyForm.status.value = state.previewProperty.status || "upcoming";
+  elements.propertyForm.visitDate.value = state.previewProperty.status === "visited" ? new Date().toISOString().slice(0, 10) : "";
+  elements.propertyForm.notes.value = "";
+  delete elements.propertyForm.dataset.editId;
+  syncSubmitButton(false, "Add property");
+  elements.mapStatusText.textContent = "Preview house loaded into the form.";
+  document.querySelector("#propertyAddress")?.focus();
+}
+
+function refreshBuildingStyles() {
+  if (!state.buildingLayer) return;
+  state.buildingLayer.eachLayer((layer) => {
+    if (!layer.__centroid) return;
+    const previewMatch = isLocationMatch(layer.__centroid, state.previewProperty);
+    const propertyMatch = state.properties.find((entry) => isLocationMatch(layer.__centroid, entry));
+    const activeStatus = previewMatch ? state.previewProperty?.status : propertyMatch?.status;
+    const isSelected = layer === state.selectedBuildingLayer || Boolean(propertyMatch && propertyMatch.id === state.selectedId);
+    layer.setStyle(getBuildingStyle(activeStatus, isSelected));
+  });
+}
+
+function getBuildingStyle(status, isSelected) {
+  const palette = {
+    upcoming: { color: "rgba(205, 168, 83, 0.72)", fillColor: "rgba(205, 168, 83, 0.34)" },
+    visited: { color: "rgba(102, 147, 95, 0.76)", fillColor: "rgba(102, 147, 95, 0.34)" },
+    "under-contract": { color: "rgba(190, 86, 86, 0.78)", fillColor: "rgba(190, 86, 86, 0.34)" }
+  };
+  const colors = palette[status] || { color: "rgba(138, 75, 58, 0.18)", fillColor: "rgba(138, 75, 58, 0.08)" };
+  return {
+    color: colors.color,
+    weight: isSelected ? 2.4 : 1.2,
+    fillColor: colors.fillColor,
+    fillOpacity: status ? (isSelected ? 0.56 : 0.42) : (isSelected ? 0.34 : 0.22)
+  };
+}
+
+function isLocationMatch(centroid, entry) {
+  if (!centroid || !entry || typeof entry.lat !== "number" || typeof entry.lng !== "number") return false;
+  return Math.abs(centroid.lat - entry.lat) <= 0.00018 && Math.abs(centroid.lng - entry.lng) <= 0.00018;
 }
 
 function syncFilterButtons() {
