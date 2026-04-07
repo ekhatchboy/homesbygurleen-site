@@ -1212,10 +1212,27 @@ function handleMapHomeUpsert_(payload) {
   const headers = HOME_MAP_HEADER_ROW.slice();
   const propertyId = String(payload.propertyId || payload["Property ID"] || "").trim() || `HOME-${Utilities.getUuid().slice(0, 8).toUpperCase()}`;
   const records = getHomeMapRecords_();
-  const existing = records.find((entry) => String(entry["Property ID"] || "").trim() === propertyId);
+  const normalizedAddress = normalizeMapAddress_(payload.address || payload["Address"] || "");
+  const existing = records.find((entry) => {
+    const entryPropertyId = String(entry["Property ID"] || "").trim();
+    const entryAddress = normalizeMapAddress_(entry["Address"] || "");
+
+    if (entryPropertyId && entryPropertyId === propertyId) {
+      return true;
+    }
+
+    if (normalizedAddress && entryAddress && entryAddress === normalizedAddress) {
+      return true;
+    }
+
+    return false;
+  });
+  const nextPropertyId = existing && String(existing["Property ID"] || "").trim()
+    ? String(existing["Property ID"]).trim()
+    : propertyId;
 
   const nextRecord = {
-    "Property ID": propertyId,
+    "Property ID": nextPropertyId,
     "Address": String(payload.address || payload["Address"] || "").trim(),
     "Lead / Client": String(payload.leadName || payload["Lead / Client"] || "").trim(),
     "Status": String(payload.status || payload["Status"] || "upcoming").trim() || "upcoming",
@@ -1232,12 +1249,12 @@ function handleMapHomeUpsert_(payload) {
   if (existing && existing._rowNumber) {
     const rowValues = headers.map((header) => nextRecord[header] || "");
     sheet.getRange(existing._rowNumber, 1, 1, headers.length).setValues([rowValues]);
-    return getHomeMapRecords_().find((entry) => entry["Property ID"] === propertyId) || nextRecord;
+    return getHomeMapRecords_().find((entry) => entry["Property ID"] === nextPropertyId) || nextRecord;
   }
 
   const rowValues = headers.map((header) => nextRecord[header] || "");
   sheet.appendRow(rowValues);
-  return getHomeMapRecords_().find((entry) => entry["Property ID"] === propertyId) || nextRecord;
+  return getHomeMapRecords_().find((entry) => entry["Property ID"] === nextPropertyId) || nextRecord;
 }
 
 function handleMapHomeDelete_(payload) {
@@ -1480,6 +1497,13 @@ function normalizeIncomingDate_(value) {
   }
 
   return formatDate_(date);
+}
+
+function normalizeMapAddress_(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function jsonResponse_(data, statusCode) {

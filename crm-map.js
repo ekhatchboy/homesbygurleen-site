@@ -13,7 +13,9 @@ const state = {
   buildingLayer: null,
   selectedBuildingLayer: null,
   buildingFetchToken: 0,
-  suppressMapClickUntil: 0
+  suppressMapClickUntil: 0,
+  buildingReloadTimer: null,
+  lastBuildingFetchKey: ""
 };
 
 const elements = {
@@ -53,11 +55,9 @@ function initializeMap() {
   state.markerLayer = L.layerGroup().addTo(state.map);
   state.buildingLayer = L.layerGroup().addTo(state.map);
   state.savedShapeLayer = L.layerGroup().addTo(state.map);
-  state.map.on("moveend zoomend", () => {
-    loadBuildingFootprints();
-  });
+  state.map.on("moveend zoomend", scheduleBuildingReload_);
   state.map.on("click", handleMapClickPreview);
-  loadBuildingFootprints();
+  scheduleBuildingReload_(0);
 }
 
 async function loadProperties() {
@@ -300,6 +300,7 @@ async function loadBuildingFootprints() {
 
   const zoom = state.map.getZoom();
   if (zoom < 17) {
+    state.lastBuildingFetchKey = "";
     state.buildingLayer.clearLayers();
     state.selectedBuildingLayer = null;
     return;
@@ -310,6 +311,19 @@ async function loadBuildingFootprints() {
   const west = bounds.getWest();
   const north = bounds.getNorth();
   const east = bounds.getEast();
+  const fetchKey = [
+    zoom,
+    south.toFixed(4),
+    west.toFixed(4),
+    north.toFixed(4),
+    east.toFixed(4)
+  ].join("|");
+
+  if (fetchKey === state.lastBuildingFetchKey) {
+    return;
+  }
+
+  state.lastBuildingFetchKey = fetchKey;
   const token = ++state.buildingFetchToken;
 
   try {
@@ -385,6 +399,17 @@ out skel qt;
   } catch {
     // Ignore footprint fetch failures quietly; the saved marker workflow still works.
   }
+}
+
+function scheduleBuildingReload_(delay = 220) {
+  if (state.buildingReloadTimer) {
+    window.clearTimeout(state.buildingReloadTimer);
+  }
+
+  state.buildingReloadTimer = window.setTimeout(() => {
+    state.buildingReloadTimer = null;
+    void loadBuildingFootprints();
+  }, delay);
 }
 
 async function handleBuildingClick(latLngs, polygon) {
