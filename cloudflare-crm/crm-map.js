@@ -944,7 +944,7 @@ function refreshBuildingStyles() {
       return;
     }
 
-    const previewMatch = isBuildingMatch(layer, state.previewProperty);
+    const previewMatch = Boolean(state.previewProperty && layer === state.selectedBuildingLayer);
     const propertyMatch = state.properties.find((entry) => isBuildingMatch(layer, entry));
     const activeStatus = previewMatch ? state.previewProperty?.status : propertyMatch?.status;
     const isSelected = layer === state.selectedBuildingLayer || Boolean(propertyMatch && propertyMatch.id === state.selectedId);
@@ -996,7 +996,7 @@ function isLocationMatch(centroid, entry) {
     return false;
   }
 
-  return Math.abs(centroid.lat - entry.lat) <= 0.00045 && Math.abs(centroid.lng - entry.lng) <= 0.00045;
+  return Math.abs(centroid.lat - entry.lat) <= 0.00012 && Math.abs(centroid.lng - entry.lng) <= 0.00012;
 }
 
 function isBuildingMatch(layer, entry) {
