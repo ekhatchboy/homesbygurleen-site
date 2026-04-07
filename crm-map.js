@@ -125,6 +125,11 @@ function renderMapMarkers() {
     const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
     marker.bindPopup(`<strong>${escapeHtml(property.address)}</strong><br>${escapeHtml(property.leadName || "No lead linked yet")}<br>${escapeHtml(readableStatus(property.status))}`);
     marker.on("click", () => {
+      if (state.selectedId === property.id) {
+        togglePropertyVisitStatus(property.id);
+        return;
+      }
+
       state.selectedId = property.id;
       renderPropertyList();
       renderPropertyDetail();
@@ -293,6 +298,28 @@ function deleteProperty(propertyId) {
   saveProperties();
   render();
   elements.mapStatusText.textContent = "Property removed.";
+}
+
+function togglePropertyVisitStatus(propertyId) {
+  const property = state.properties.find((entry) => entry.id === propertyId);
+  if (!property) return;
+
+  if (property.status === "under-contract") {
+    elements.mapStatusText.textContent = "Under-contract homes stay red. Change that from the form if needed.";
+    return;
+  }
+
+  property.status = property.status === "visited" ? "upcoming" : "visited";
+  if (property.status === "visited" && !property.visitDate) {
+    property.visitDate = new Date().toISOString().slice(0, 10);
+  }
+
+  saveProperties();
+  render();
+  focusSelectedMarker();
+  elements.mapStatusText.textContent = property.status === "visited"
+    ? "Marked as visited from the map."
+    : "Marked as upcoming from the map.";
 }
 
 function focusSelectedMarker() {
