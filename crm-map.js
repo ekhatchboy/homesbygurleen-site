@@ -491,14 +491,18 @@ function renderPropertyDetail() {
       </div>
     </div>
     <div class="map-detail-notes">${escapeHtml(property.notes || "No notes yet.")}</div>
-    <div class="map-detail-actions">
-      <button type="button" class="map-button map-button-secondary" data-edit-property="${escapeHtml(property.id)}">Load into form</button>
-      <button type="button" class="map-button map-button-secondary" data-open-map="${escapeHtml(property.id)}">Open map</button>
-      <button type="button" class="map-button map-button-secondary" data-delete-property="${escapeHtml(property.id)}">Delete property</button>
-    </div>
+      <div class="map-detail-actions">
+        <button type="button" class="map-button map-button-secondary" data-edit-property="${escapeHtml(property.id)}">Load into form</button>
+        <button type="button" class="map-button map-button-secondary" data-clear-color="${escapeHtml(property.id)}">Clear color</button>
+        <button type="button" class="map-button map-button-secondary" data-open-map="${escapeHtml(property.id)}">Open map</button>
+        <button type="button" class="map-button map-button-secondary" data-delete-property="${escapeHtml(property.id)}">Delete property</button>
+      </div>
   `;
 
   document.querySelector("[data-edit-property]")?.addEventListener("click", () => loadPropertyIntoForm(property));
+  document.querySelector("[data-clear-color]")?.addEventListener("click", () => {
+    void clearPropertyColor(property.id);
+  });
   document.querySelector("[data-open-map]")?.addEventListener("click", () => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(property.address)}`, "_blank");
   });
@@ -680,6 +684,27 @@ async function deleteProperty(propertyId) {
   saveProperties();
   render();
   elements.mapStatusText.textContent = "Property removed.";
+}
+
+async function clearPropertyColor(propertyId) {
+  const property = state.properties.find((entry) => entry.id === propertyId);
+  if (!property) {
+    return;
+  }
+
+  property.shapePoints = "";
+  property.buildingKey = "";
+
+  try {
+    const savedProperty = await savePropertyToSheet_(property);
+    Object.assign(property, savedProperty);
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to clear house color.";
+    return;
+  }
+
+  render();
+  elements.mapStatusText.textContent = "House color cleared from the map.";
 }
 
 function togglePropertyVisitStatus(propertyId) {
