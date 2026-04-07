@@ -789,35 +789,45 @@ async function savePreviewProperty() {
   }
 
   const preview = state.previewProperty;
-  const existing = state.properties.find((entry) => isBuildingMatch(state.selectedBuildingLayer, entry) || isLocationMatch(preview, entry));
-  if (existing) {
-    existing.address = preview.address;
-    existing.status = preview.status;
-    existing.lat = preview.lat;
-    existing.lng = preview.lng;
-    existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
-    existing.shapePoints = preview.shapePoints || existing.shapePoints || "";
-    existing.showInList = false;
-    if (preview.status === "visited" && !existing.visitDate) {
-      existing.visitDate = new Date().toISOString().slice(0, 10);
-    }
-    const savedExisting = await savePropertyToSheet_(existing);
-    Object.assign(existing, savedExisting);
-  } else {
-    const savedProperty = await savePropertyToSheet_({
-      id: crypto.randomUUID(),
-      address: preview.address,
-      leadName: "",
-      status: preview.status,
-      visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
-      notes: "",
+  if (!preview.shapePoints) {
+    elements.mapStatusText.textContent = "I didn't lock onto a house shape yet. Click directly on a house footprint, then save again.";
+    return;
+  }
+
+  try {
+    const existing = findMatchingPropertyForPreview_();
+    if (existing) {
+      existing.address = preview.address;
+      existing.status = preview.status;
+      existing.lat = preview.lat;
+      existing.lng = preview.lng;
+      existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
+      existing.shapePoints = preview.shapePoints || existing.shapePoints || "";
+      existing.showInList = false;
+      if (preview.status === "visited" && !existing.visitDate) {
+        existing.visitDate = new Date().toISOString().slice(0, 10);
+      }
+      const savedExisting = await savePropertyToSheet_(existing);
+      Object.assign(existing, savedExisting);
+    } else {
+      const savedProperty = await savePropertyToSheet_({
+        id: crypto.randomUUID(),
+        address: preview.address,
+        leadName: "",
+        status: preview.status,
+        visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
+        notes: "",
         lat: preview.lat,
         lng: preview.lng,
         buildingKey: preview.buildingKey || "",
         shapePoints: preview.shapePoints || "",
         showInList: false
       });
-    state.properties.unshift(savedProperty);
+      state.properties.unshift(savedProperty);
+    }
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to save house color right now.";
+    return;
   }
 
   state.selectedId = "";
