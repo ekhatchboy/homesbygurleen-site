@@ -65,13 +65,15 @@ function render() {
 }
 
 function renderMetrics() {
-  elements.metricTotal.textContent = String(state.properties.length);
-  elements.metricVisited.textContent = String(state.properties.filter((entry) => entry.status === "visited").length);
-  elements.metricUpcoming.textContent = String(state.properties.filter((entry) => entry.status === "upcoming").length);
+  const listedProperties = state.properties.filter((entry) => entry.showInList !== false);
+  elements.metricTotal.textContent = String(listedProperties.length);
+  elements.metricVisited.textContent = String(listedProperties.filter((entry) => entry.status === "visited").length);
+  elements.metricUpcoming.textContent = String(listedProperties.filter((entry) => entry.status === "upcoming").length);
 }
 
 function getFilteredProperties() {
-  return state.filter === "all" ? state.properties : state.properties.filter((entry) => entry.status === state.filter);
+  const listedProperties = state.properties.filter((entry) => entry.showInList !== false);
+  return state.filter === "all" ? listedProperties : listedProperties.filter((entry) => entry.status === state.filter);
 }
 
 function renderPropertyList() {
@@ -484,23 +486,36 @@ function setPreviewStatus(status) {
 function savePreviewProperty() {
   if (!state.previewProperty) return;
   const preview = state.previewProperty;
-  const property = {
-    id: crypto.randomUUID(),
-    address: preview.address,
-    leadName: "",
-    status: preview.status,
-    visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
-    notes: "",
-    lat: preview.lat,
-    lng: preview.lng
-  };
-  state.properties.unshift(property);
-  state.selectedId = property.id;
+  const existing = state.properties.find((entry) => isLocationMatch(preview, entry));
+  if (existing) {
+    existing.address = preview.address;
+    existing.status = preview.status;
+    existing.lat = preview.lat;
+    existing.lng = preview.lng;
+    existing.showInList = false;
+    if (preview.status === "visited" && !existing.visitDate) {
+      existing.visitDate = new Date().toISOString().slice(0, 10);
+    }
+  } else {
+    state.properties.unshift({
+      id: crypto.randomUUID(),
+      address: preview.address,
+      leadName: "",
+      status: preview.status,
+      visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
+      notes: "",
+      lat: preview.lat,
+      lng: preview.lng,
+      showInList: false
+    });
+  }
+  state.selectedId = "";
   saveProperties();
+  state.map?.closePopup();
   clearPreviewMarker();
   render();
-  focusSelectedMarker();
-  elements.mapStatusText.textContent = "House saved to your map.";
+  refreshBuildingStyles();
+  elements.mapStatusText.textContent = "House color saved on the map.";
 }
 
 function loadPreviewIntoForm() {
@@ -586,7 +601,7 @@ function getBuildingStyle(status, isSelected) {
 
 function isLocationMatch(centroid, entry) {
   if (!centroid || !entry || typeof entry.lat !== "number" || typeof entry.lng !== "number") return false;
-  return Math.abs(centroid.lat - entry.lat) <= 0.00018 && Math.abs(centroid.lng - entry.lng) <= 0.00018;
+  return Math.abs(centroid.lat - entry.lat) <= 0.00045 && Math.abs(centroid.lng - entry.lng) <= 0.00045;
 }
 
 function syncFilterButtons() {
