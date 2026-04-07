@@ -51,8 +51,8 @@ function initializeMap() {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(state.map);
   state.markerLayer = L.layerGroup().addTo(state.map);
-  state.savedShapeLayer = L.layerGroup().addTo(state.map);
   state.buildingLayer = L.layerGroup().addTo(state.map);
+  state.savedShapeLayer = L.layerGroup().addTo(state.map);
   state.map.on("moveend zoomend", () => {
     loadBuildingFootprints();
   });
@@ -288,6 +288,9 @@ function renderSavedShapes() {
     });
     polygon.addTo(state.savedShapeLayer);
   });
+
+  state.savedShapeLayer.bringToFront();
+  state.markerLayer?.bringToFront();
 }
 
 async function loadBuildingFootprints() {
