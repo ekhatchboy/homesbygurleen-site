@@ -144,9 +144,11 @@ function renderMapMarkers() {
 async function loadBuildingFootprints() {
   if (!state.map || !state.buildingLayer) return;
   const zoom = state.map.getZoom();
-  state.buildingLayer.clearLayers();
-  state.selectedBuildingLayer = null;
-  if (zoom < 17) return;
+  if (zoom < 17) {
+    state.buildingLayer.clearLayers();
+    state.selectedBuildingLayer = null;
+    return;
+  }
 
   const bounds = state.map.getBounds();
   const south = bounds.getSouth();
@@ -178,6 +180,8 @@ out skel qt;
       if (element.type === "node") nodeMap.set(element.id, [element.lat, element.lon]);
     });
 
+    const nextLayer = L.layerGroup();
+
     (data.elements || []).forEach((element) => {
       if (element.type !== "way" || !Array.isArray(element.nodes)) return;
       const latLngs = element.nodes.map((nodeId) => nodeMap.get(nodeId)).filter(Boolean);
@@ -197,7 +201,12 @@ out skel qt;
         await handleBuildingClick(latLngs, polygon);
       });
 
-      polygon.addTo(state.buildingLayer);
+      polygon.addTo(nextLayer);
+    });
+
+    state.buildingLayer.clearLayers();
+    nextLayer.eachLayer((layer) => {
+      layer.addTo(state.buildingLayer);
     });
     refreshBuildingStyles();
   } catch {

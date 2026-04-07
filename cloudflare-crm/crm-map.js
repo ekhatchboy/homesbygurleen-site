@@ -171,10 +171,9 @@ async function loadBuildingFootprints() {
   }
 
   const zoom = state.map.getZoom();
-  state.buildingLayer.clearLayers();
-  state.selectedBuildingLayer = null;
-
   if (zoom < 17) {
+    state.buildingLayer.clearLayers();
+    state.selectedBuildingLayer = null;
     return;
   }
 
@@ -218,6 +217,8 @@ out skel qt;
       }
     });
 
+    const nextLayer = L.layerGroup();
+
     (data.elements || []).forEach((element) => {
       if (element.type !== "way" || !Array.isArray(element.nodes)) {
         return;
@@ -245,7 +246,12 @@ out skel qt;
         await handleBuildingClick(latLngs, polygon);
       });
 
-      polygon.addTo(state.buildingLayer);
+      polygon.addTo(nextLayer);
+    });
+
+    state.buildingLayer.clearLayers();
+    nextLayer.eachLayer((layer) => {
+      layer.addTo(state.buildingLayer);
     });
     refreshBuildingStyles();
   } catch {
