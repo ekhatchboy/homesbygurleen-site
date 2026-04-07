@@ -655,15 +655,39 @@ async function handlePropertySearch() {
 }
 
 async function geocodeAddress(address) {
-  const query = /california|,\s*ca\b/i.test(address) ? address : `${address}, CA`;
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(query)}`, {
-      headers: { "Accept": "application/json" }
-    });
-  if (!response.ok) throw new Error("Map lookup could not reach the address service.");
-  const results = await response.json();
-  const match = Array.isArray(results) ? results[0] : null;
-  if (!match) throw new Error("I could not place that address on the map. Try a fuller address.");
-  return { lat: Number(match.lat), lng: Number(match.lon) };
+  const baseQuery = String(address || "").trim();
+  const californiaQuery = /california|,\s*ca\b/i.test(baseQuery) ? baseQuery : `${baseQuery}, CA`;
+  const queries = [
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(californiaQuery)}`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&state=California&q=${encodeURIComponent(californiaQuery)}`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&q=${encodeURIComponent(californiaQuery)}`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&q=${encodeURIComponent(baseQuery)}`
+  ];
+
+  let lastError = null;
+
+  for (const url of queries) {
+    try {
+      const response = await fetch(url, {
+        headers: { "Accept": "application/json" }
+      });
+
+      if (!response.ok) {
+        lastError = new Error("Map lookup could not reach the address service.");
+        continue;
+      }
+
+      const results = await response.json();
+      const match = Array.isArray(results) ? results[0] : null;
+      if (match) {
+        return { lat: Number(match.lat), lng: Number(match.lon) };
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("I could not place that address on the map. Try a fuller address.");
 }
 
 async function reverseGeocodeLatLng(lat, lng) {
