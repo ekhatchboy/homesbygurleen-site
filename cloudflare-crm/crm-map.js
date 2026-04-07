@@ -138,15 +138,7 @@ function renderPropertyList() {
 
 function renderMapMarkers() {
   state.markerLayer.clearLayers();
-  const visible = getFilteredProperties();
   refreshBuildingStyles();
-
-  const withCoords = visible.filter((entry) => typeof entry.lat === "number" && typeof entry.lng === "number");
-  if (withCoords.length === 1) {
-    state.map.setView([withCoords[0].lat, withCoords[0].lng], 14);
-  } else if (withCoords.length > 1) {
-    state.map.fitBounds(L.latLngBounds(withCoords.map((entry) => [entry.lat, entry.lng])).pad(0.22));
-  }
 }
 
 async function loadBuildingFootprints() {
@@ -552,8 +544,8 @@ function showPreviewMarker(location, address) {
 }
 
 function clearPreviewMarker() {
-  if (state.previewPopup && state.map) {
-    state.map.removeLayer(state.previewPopup);
+  if (state.previewPopup) {
+    state.previewPopup.remove();
   }
   state.map?.closePopup();
   state.previewMarker = null;
@@ -607,10 +599,9 @@ function savePreviewProperty() {
 
   state.selectedId = "";
   saveProperties();
-  if (state.previewPopup && state.map) {
-    state.map.removeLayer(state.previewPopup);
+  if (state.previewPopup) {
+    state.previewPopup.remove();
   }
-  state.previewPopup = null;
   state.map?.closePopup();
   clearPreviewMarker();
   render();
@@ -705,16 +696,16 @@ function refreshBuildingStyles() {
 function getBuildingStyle(status, isSelected) {
   const palette = {
     upcoming: {
-      color: "rgba(205, 168, 83, 0.72)",
-      fillColor: "rgba(205, 168, 83, 0.34)"
+      color: "rgba(205, 168, 83, 0.96)",
+      fillColor: "rgba(205, 168, 83, 0.72)"
     },
     visited: {
-      color: "rgba(102, 147, 95, 0.76)",
-      fillColor: "rgba(102, 147, 95, 0.34)"
+      color: "rgba(102, 147, 95, 0.96)",
+      fillColor: "rgba(102, 147, 95, 0.72)"
     },
     "under-contract": {
-      color: "rgba(190, 86, 86, 0.78)",
-      fillColor: "rgba(190, 86, 86, 0.34)"
+      color: "rgba(190, 86, 86, 0.98)",
+      fillColor: "rgba(190, 86, 86, 0.74)"
     }
   };
 
@@ -725,9 +716,9 @@ function getBuildingStyle(status, isSelected) {
 
   return {
     color: colors.color,
-    weight: isSelected ? 2.4 : 1.2,
+    weight: isSelected ? 2.8 : 1.6,
     fillColor: colors.fillColor,
-    fillOpacity: status ? (isSelected ? 0.56 : 0.42) : (isSelected ? 0.34 : 0.22)
+    fillOpacity: status ? (isSelected ? 0.92 : 0.78) : (isSelected ? 0.42 : 0.22)
   };
 }
 
