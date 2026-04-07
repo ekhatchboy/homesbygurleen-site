@@ -80,6 +80,36 @@ body {
 .map-hero { grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr); align-items: stretch; }
 .map-hero-copy h1 { margin: 0 0 12px; font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 1.06; max-width: 18ch; }
 .map-hero-copy p, .map-inline-note, .map-empty-state, .map-property-subtitle { color: var(--muted); line-height: 1.6; }
+.map-suggestions[hidden] { display: none; }
+.map-suggestions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.map-suggestion-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+.map-suggestion-button {
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(64, 38, 26, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+.map-suggestion-button:hover {
+  border-color: rgba(138, 75, 58, 0.34);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(93, 45, 37, 0.07);
+}
 
 .map-hero-summary { display: grid; gap: 14px; }
 .map-summary-card { padding: 20px 22px; }

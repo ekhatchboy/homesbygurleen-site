@@ -25,6 +25,7 @@ const elements = {
   propertyList: document.querySelector("#propertyList"),
   propertyDetailCard: document.querySelector("#propertyDetailCard"),
   mapStatusText: document.querySelector("#mapStatusText"),
+  mapSuggestions: document.querySelector("#mapSuggestions"),
   mapHoverReadout: document.querySelector("#mapHoverReadout"),
   metricTotal: document.querySelector("#mapMetricTotal"),
   metricVisited: document.querySelector("#mapMetricVisited"),
@@ -634,11 +635,13 @@ async function handlePropertySearch() {
   const address = String(document.querySelector("#propertyAddress")?.value || "").trim();
   if (!address) {
     elements.mapStatusText.textContent = "Enter an address first, then search it on the map.";
+    renderAddressSuggestions([]);
     return;
   }
 
   syncSearchButton(true);
   elements.mapStatusText.textContent = "Searching that address on the map.";
+  renderAddressSuggestions([]);
 
   try {
     const location = await geocodeAddress(address);
@@ -648,23 +651,66 @@ async function handlePropertySearch() {
     await showPreviewMarker(location, normalizedAddress);
     elements.mapStatusText.textContent = "Address found on the California map. Choose a color and save it on the map.";
   } catch (error) {
-    elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
+    const suggestions = await getAddressSuggestions(address);
+    if (suggestions.length) {
+      elements.mapStatusText.textContent = "I couldn't place that exact address, but I found a few likely matches below.";
+      renderAddressSuggestions(suggestions);
+    } else {
+      elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
+    }
   } finally {
     syncSearchButton(false);
   }
 }
 
 async function geocodeAddress(address) {
-  const baseQuery = String(address || "").trim();
-  const californiaQuery = /california|,\s*ca\b/i.test(baseQuery) ? baseQuery : `${baseQuery}, CA`;
-  const nominatimQueries = [
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(californiaQuery)}`,
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&state=California&q=${encodeURIComponent(californiaQuery)}`,
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&q=${encodeURIComponent(californiaQuery)}`,
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&q=${encodeURIComponent(baseQuery)}`
-  ];
+  const suggestions = await getAddressSuggestions(address, 1);
+  const match = suggestions[0];
+  if (match) {
+    return { lat: match.lat, lng: match.lng };
+  }
 
-  let lastError = null;
+  throw new Error("I could not place that address on the map. Try a fuller address or choose one of the suggestions.");
+}
+
+async function getAddressSuggestions(address, limit = 5) {
+  const baseQuery = String(address || "").trim();
+  if (!baseQuery) {
+    return [];
+  }
+
+  const californiaQuery = /california|,\s*ca\b/i.test(baseQuery) ? baseQuery : `${baseQuery}, CA`;
+  const candidates = [];
+  const seen = new Set();
+
+  const addCandidate = (label, lat, lng) => {
+    const normalizedLabel = String(label || "").trim();
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+
+    if (!normalizedLabel || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
+    }
+
+    const key = `${normalizedLabel.toLowerCase()}|${latitude.toFixed(6)}|${longitude.toFixed(6)}`;
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    candidates.push({
+      label: normalizedLabel,
+      lat: latitude,
+      lng: longitude
+    });
+  };
+
+  const nominatimQueries = [
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=${Math.max(limit, 5)}&addressdetails=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(californiaQuery)}`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=${Math.max(limit, 5)}&addressdetails=1&state=California&q=${encodeURIComponent(californiaQuery)}`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=${Math.max(limit, 5)}&addressdetails=1&q=${encodeURIComponent(californiaQuery)}`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=${Math.max(limit, 5)}&addressdetails=1&q=${encodeURIComponent(baseQuery)}`
+  ];
 
   for (const url of nominatimQueries) {
     try {
@@ -673,17 +719,21 @@ async function geocodeAddress(address) {
       });
 
       if (!response.ok) {
-        lastError = new Error("Map lookup could not reach the address service.");
         continue;
       }
 
       const results = await response.json();
-      const match = Array.isArray(results) ? results[0] : null;
-      if (match) {
-        return { lat: Number(match.lat), lng: Number(match.lon) };
+      if (Array.isArray(results)) {
+        results.forEach((result) => {
+          addCandidate(result.display_name, result.lat, result.lon);
+        });
       }
-    } catch (error) {
-      lastError = error;
+
+      if (candidates.length >= limit) {
+        return candidates.slice(0, limit);
+      }
+    } catch {
+      // Try the next address service.
     }
   }
 
@@ -699,22 +749,90 @@ async function geocodeAddress(address) {
       });
 
       if (!response.ok) {
-        lastError = new Error("Map lookup could not reach the address service.");
         continue;
       }
 
       const payload = await response.json();
-      const match = payload?.result?.addressMatches?.[0];
-      const coordinates = match?.coordinates;
-      if (coordinates && Number.isFinite(Number(coordinates.y)) && Number.isFinite(Number(coordinates.x))) {
-        return { lat: Number(coordinates.y), lng: Number(coordinates.x) };
+      const matches = Array.isArray(payload?.result?.addressMatches) ? payload.result.addressMatches : [];
+      matches.forEach((match) => {
+        addCandidate(match.matchedAddress, match?.coordinates?.y, match?.coordinates?.x);
+      });
+
+      if (candidates.length >= limit) {
+        return candidates.slice(0, limit);
       }
-    } catch (error) {
-      lastError = error;
+    } catch {
+      // Try the next address service.
     }
   }
 
-  throw lastError || new Error("I could not place that address on the map. Try a fuller address.");
+  return candidates.slice(0, limit);
+}
+
+function renderAddressSuggestions(suggestions) {
+  if (!elements.mapSuggestions) {
+    return;
+  }
+
+  const items = Array.isArray(suggestions) ? suggestions.slice(0, 5) : [];
+  if (!items.length) {
+    elements.mapSuggestions.hidden = true;
+    elements.mapSuggestions.innerHTML = "";
+    return;
+  }
+
+  elements.mapSuggestions.hidden = false;
+  elements.mapSuggestions.innerHTML = `
+    <p class="map-suggestion-copy">Did you mean one of these?</p>
+    ${items.map((item, index) => `
+      <button
+        type="button"
+        class="map-suggestion-button"
+        data-suggestion-index="${index}"
+      >${escapeHtml(item.label)}</button>
+    `).join("")}
+  `;
+
+  elements.mapSuggestions.querySelectorAll("[data-suggestion-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = items[Number(button.getAttribute("data-suggestion-index") || "-1")];
+      if (!selected) {
+        return;
+      }
+
+      void applyAddressSuggestion(selected);
+    });
+  });
+}
+
+async function applyAddressSuggestion(suggestion) {
+  const chosen = suggestion || {};
+  if (!Number.isFinite(Number(chosen.lat)) || !Number.isFinite(Number(chosen.lng))) {
+    return;
+  }
+
+  const chosenAddress = String(chosen.label || "").trim();
+  if (chosenAddress) {
+    document.querySelector("#propertyAddress").value = chosenAddress;
+  }
+
+  syncSearchButton(true);
+  elements.mapStatusText.textContent = "Opening that suggested address on the map.";
+
+  try {
+    state.map.setView([Number(chosen.lat), Number(chosen.lng)], 17, { animate: true });
+    await waitForMapIdle_();
+    await showPreviewMarker(
+      { lat: Number(chosen.lat), lng: Number(chosen.lng) },
+      chosenAddress || await reverseGeocodeLatLng(Number(chosen.lat), Number(chosen.lng)).catch(() => chosenAddress)
+    );
+    renderAddressSuggestions([]);
+    elements.mapStatusText.textContent = "Suggested address loaded. Choose a color and save it on the map.";
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "I couldn't open that suggested address on the map.";
+  } finally {
+    syncSearchButton(false);
+  }
 }
 
 async function reverseGeocodeLatLng(lat, lng) {
