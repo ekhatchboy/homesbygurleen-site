@@ -863,11 +863,12 @@ function openPreviewPopup() {
   const content = `
     <div class="map-preview-popup">
       <strong>${escapeHtml(preview.address)}</strong>
-      <div class="map-preview-actions">
-        <button type="button" class="map-status-button${preview.status === "upcoming" ? " is-active" : ""}" data-popup-preview-status="upcoming">Gold</button>
-        <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-popup-preview-status="visited">Green</button>
-        <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-popup-preview-status="under-contract">Red</button>
-      </div>
+        <div class="map-preview-actions">
+          <button type="button" class="map-status-button${preview.status === "upcoming" ? " is-active" : ""}" data-popup-preview-status="upcoming">Gold</button>
+          <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-popup-preview-status="visited">Green</button>
+          <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-popup-preview-status="under-contract">Red</button>
+          <button type="button" class="map-status-button" data-popup-clear-preview>Clear</button>
+        </div>
       <button type="button" class="map-button map-button-primary map-popup-save" data-popup-save-preview>Save on Map</button>
     </div>
   `;
@@ -896,6 +897,24 @@ function openPreviewPopup() {
         setPreviewStatus(button.getAttribute("data-popup-preview-status") || "upcoming");
         openPreviewPopup();
       });
+    });
+
+    popupRoot.querySelector("[data-popup-clear-preview]")?.addEventListener("click", async () => {
+      if (!state.previewProperty) {
+        return;
+      }
+
+      const existing = state.properties.find((entry) =>
+        isBuildingMatch(state.selectedBuildingLayer, entry) || isLocationMatch(state.previewProperty, entry)
+      );
+
+      if (existing) {
+        await clearPropertyColor(existing.id);
+      } else {
+        clearPreviewMarker();
+        render();
+        elements.mapStatusText.textContent = "Preview color cleared.";
+      }
     });
 
     popupRoot.querySelector("[data-popup-save-preview]")?.addEventListener("click", () => {
