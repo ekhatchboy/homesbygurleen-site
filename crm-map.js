@@ -48,7 +48,7 @@ function initialize() {
 }
 
 function initializeMap() {
-  state.map = L.map("propertyMap", { zoomControl: true }).setView([37.3869, -120.7235], 14);
+  state.map = L.map("propertyMap", { zoomControl: true }).setView([37.25, -119.75], 6);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors"
   }).addTo(state.map);
@@ -646,7 +646,7 @@ async function handlePropertySearch() {
     state.map.setView([location.lat, location.lng], 17, { animate: true });
     await waitForMapIdle_();
     await showPreviewMarker(location, normalizedAddress);
-    elements.mapStatusText.textContent = "Address found. Choose a color and save it on the map.";
+    elements.mapStatusText.textContent = "Address found on the California map. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
   } finally {
@@ -655,10 +655,10 @@ async function handlePropertySearch() {
 }
 
 async function geocodeAddress(address) {
-  const query = /livingston/i.test(address) ? address : `${address}, Livingston, CA`;
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&viewbox=-120.77,37.41,-120.67,37.34&bounded=1&q=${encodeURIComponent(query)}`, {
-    headers: { "Accept": "application/json" }
-  });
+  const query = /california|,\s*ca\b/i.test(address) ? address : `${address}, CA`;
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(query)}`, {
+      headers: { "Accept": "application/json" }
+    });
   if (!response.ok) throw new Error("Map lookup could not reach the address service.");
   const results = await response.json();
   const match = Array.isArray(results) ? results[0] : null;
