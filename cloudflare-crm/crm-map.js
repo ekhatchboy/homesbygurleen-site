@@ -620,18 +620,20 @@ function openPreviewPopup() {
     </div>
   `;
 
-  L.popup({
+  const popup = L.popup({
     closeButton: true,
     autoClose: false,
     closeOnClick: false,
     className: "map-preview-leaflet-popup"
   })
     .setLatLng([preview.lat, preview.lng])
-    .setContent(content)
-    .openOn(state.map);
+    .setContent(content);
 
-  window.setTimeout(() => {
-    const popupRoot = document.querySelector(".map-preview-popup");
+  popup.openOn(state.map);
+
+  window.requestAnimationFrame(() => {
+    const popupElement = popup.getElement();
+    const popupRoot = popupElement?.querySelector(".map-preview-popup");
     if (!popupRoot) {
       return;
     }
@@ -646,7 +648,7 @@ function openPreviewPopup() {
     popupRoot.querySelector("[data-popup-save-preview]")?.addEventListener("click", () => {
       savePreviewProperty();
     });
-  }, 0);
+  });
 }
 
 function refreshBuildingStyles() {
