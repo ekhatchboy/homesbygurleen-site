@@ -208,12 +208,11 @@ async function handleBuildingClick(latLngs, polygon) {
   highlightBuilding(polygon);
   const centroid = getPolygonCentroid(latLngs);
   if (!centroid) return;
-  elements.mapStatusText.textContent = "Looking up that house so you can add it.";
+  elements.mapStatusText.textContent = "Looking up that house so you can color it on the map.";
   try {
     const address = await reverseGeocodeLatLng(centroid.lat, centroid.lng);
-    document.querySelector("#propertyAddress").value = address;
-    state.map.setView([centroid.lat, centroid.lng], 17, { animate: true });
-    elements.mapStatusText.textContent = "House selected on the map. Add details and save it when you're ready.";
+    showPreviewMarker(centroid, address);
+    elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that house yet.";
   }
@@ -225,8 +224,8 @@ async function handleMapClickPreview(event) {
   elements.mapStatusText.textContent = "Checking the nearest address on the map.";
   try {
     const address = await reverseGeocodeLatLng(event.latlng.lat, event.latlng.lng);
-    document.querySelector("#propertyAddress").value = address;
-    elements.mapStatusText.textContent = "Address selected from the map. Save it when you're ready.";
+    showPreviewMarker(event.latlng, address);
+    elements.mapStatusText.textContent = "House selected. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
   }
@@ -384,9 +383,9 @@ async function handlePropertySearch() {
   try {
     const location = await geocodeAddress(address);
     const normalizedAddress = await reverseGeocodeLatLng(location.lat, location.lng).catch(() => address);
-    document.querySelector("#propertyAddress").value = normalizedAddress;
     state.map.setView([location.lat, location.lng], 17, { animate: true });
-    elements.mapStatusText.textContent = "Address found on the Livingston map.";
+    showPreviewMarker(location, normalizedAddress);
+    elements.mapStatusText.textContent = "Address found. Choose a color and save it on the map.";
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
   } finally {
@@ -480,7 +479,7 @@ function showPreviewMarker(location, address) {
     status: "upcoming",
     buildingKey: matchedBuilding?.__buildingKey || ""
   };
-  state.map.setView([location.lat, location.lng], 17, { animate: true });
+  document.querySelector("#propertyAddress").value = address;
   state.selectedId = "";
   renderPropertyDetail();
   refreshBuildingStyles();
@@ -488,10 +487,12 @@ function showPreviewMarker(location, address) {
 }
 
 function clearPreviewMarker() {
-  if (state.previewPopup) {
+  if (state.previewPopup && state.map) {
+    state.map.closePopup(state.previewPopup);
     state.previewPopup.remove();
+  } else {
+    state.map?.closePopup();
   }
-  state.map?.closePopup();
   state.previewMarker = null;
   state.previewPopup = null;
   state.previewProperty = null;
@@ -536,10 +537,12 @@ function savePreviewProperty() {
   }
   state.selectedId = "";
   saveProperties();
-  if (state.previewPopup) {
+  if (state.previewPopup && state.map) {
+    state.map.closePopup(state.previewPopup);
     state.previewPopup.remove();
+  } else {
+    state.map?.closePopup();
   }
-  state.map?.closePopup();
   clearPreviewMarker();
   render();
   refreshBuildingStyles();
@@ -561,6 +564,11 @@ function loadPreviewIntoForm() {
 
 function openPreviewPopup() {
   if (!state.previewProperty || !state.map) return;
+  if (state.previewPopup) {
+    state.map.closePopup(state.previewPopup);
+    state.previewPopup.remove();
+    state.previewPopup = null;
+  }
   const preview = state.previewProperty;
   const content = `
     <div class="map-preview-popup">
