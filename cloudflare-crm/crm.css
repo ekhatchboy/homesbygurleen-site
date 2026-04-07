@@ -71,6 +71,13 @@ body::after {
   margin-bottom: 28px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
 .brand-block,
 .crm-copy,
 .crm-status-card,
