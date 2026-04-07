@@ -325,7 +325,7 @@ function togglePropertyVisitStatus(propertyId) {
 function focusSelectedMarker() {
   const property = state.properties.find((entry) => entry.id === state.selectedId);
   if (!property || typeof property.lat !== "number" || typeof property.lng !== "number") return;
-  state.map.setView([property.lat, property.lng], 15, { animate: true });
+  state.map.setView([property.lat, property.lng], 17, { animate: true });
 }
 
 function showPreviewMarker(location, address) {
@@ -339,7 +339,7 @@ function showPreviewMarker(location, address) {
   });
   state.previewMarker = L.marker([location.lat, location.lng], { icon }).addTo(state.map);
   state.previewMarker.bindPopup(`<strong>${escapeHtml(address)}</strong><br>Preview only`).openPopup();
-  state.map.setView([location.lat, location.lng], 15, { animate: true });
+  state.map.setView([location.lat, location.lng], 17, { animate: true });
 }
 
 function clearPreviewMarker() {
