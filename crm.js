@@ -301,7 +301,7 @@ function renderSelectedLead() {
           <button type="button" class="button button-danger" id="deleteLeadButton">Delete lead</button>
         </div>
       </form>
-    <p class="crm-inline-note">Transcript / raw responses are preserved in Google Sheets so you always have the original lead context.</p>
+    <p class="crm-inline-note">Transcript and raw responses stay preserved in Google Sheets so you always keep the original lead context.</p>
   `;
 
   document.querySelector("#leadEditForm")?.addEventListener("submit", (event) => {
@@ -422,7 +422,7 @@ async function saveLead(leadId, formData) {
     if (result.lead && result.lead["Lead ID"]) {
       upsertLeadInState(result.lead);
       applyFilters();
-      void refreshLeadsInBackground();
+      scheduleQuietLeadRefresh();
     } else {
       await loadLeads();
     }
@@ -482,7 +482,7 @@ async function handleCreateLeadSubmit(event) {
       closeLeadModal({ reset: true });
       applyFilters();
       elements.statusText.textContent = "Lead added successfully.";
-      void refreshLeadsInBackground();
+      scheduleQuietLeadRefresh();
     } else {
       throw new Error("Lead was created, but no record was returned.");
     }
@@ -499,9 +499,9 @@ function updateMetrics(leads) {
   const newCount = leads.filter((lead) => lead["Lead Status"] === "New").length;
   const activeCount = leads.filter((lead) => lead["Lead Status"] === "Active").length;
   const dueCount = leads.filter((lead) => {
-    const dueState = getDueState(lead["Next Follow-Up Date"]);
-    return dueState.className === "is-today" || dueState.className === "is-overdue";
-  }).length;
+      const dueState = getDueState(lead["Next Follow-Up Date"]);
+      return dueState.className === "is-today" || dueState.className === "is-overdue";
+    }).length;
 
   elements.metricTotal.textContent = String(total);
   elements.metricNew.textContent = String(newCount);
@@ -510,7 +510,7 @@ function updateMetrics(leads) {
   if (elements.heroMetricTotal) elements.heroMetricTotal.textContent = String(total);
   if (elements.heroMetricNew) elements.heroMetricNew.textContent = String(newCount);
   if (elements.heroMetricDue) elements.heroMetricDue.textContent = String(dueCount);
-}
+  }
 
 function getDueState(dateValue) {
   if (!dateValue) {
@@ -643,11 +643,7 @@ function formatLongDate(value) {
 }
 
 function renderPill(text, className = "") {
-    if (!text) {
-      return "";
-    }
-  
-    return `<span class="crm-pill ${className}">${escapeHtml(text)}</span>`;
+    return text ? `<span class="crm-pill ${className}">${escapeHtml(text)}</span>` : "";
   }
 
 function renderPipelineDuePill(dueState, lead) {
@@ -677,21 +673,11 @@ function renderContractPills(lead) {
 }
 
 function renderDetailItem(label, value) {
-  return `
-    <div>
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value)}</strong>
-    </div>
-  `;
+  return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
 function renderSnapshotCard(label, value) {
-  return `
-    <article class="crm-snapshot-card">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value)}</strong>
-    </article>
-  `;
+  return `<article class="crm-snapshot-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`;
 }
 
 function renderTimeline(lead) {
@@ -1018,7 +1004,7 @@ async function saveLeadPatch(payload) {
     if (result.lead && result.lead["Lead ID"]) {
       upsertLeadInState(result.lead);
       applyFilters();
-      void refreshLeadsInBackground();
+      scheduleQuietLeadRefresh();
     } else {
       await loadLeads();
     }
@@ -1080,12 +1066,7 @@ async function deleteLead(lead) {
 
 function renderInput(label, value = "", type = "text") {
   const normalizedValue = type === "date" ? normalizeDateInputValue(value) : (value || "");
-  return `
-    <label>
-      <span>${escapeHtml(label)}</span>
-      <input name="${escapeHtml(label)}" type="${escapeHtml(type)}" value="${escapeAttribute(normalizedValue)}">
-    </label>
-  `;
+  return `<label><span>${escapeHtml(label)}</span><input name="${escapeHtml(label)}" type="${escapeHtml(type)}" value="${escapeAttribute(normalizedValue)}"></label>`;
 }
 
 function renderSelect(label, options, selectedValue) {
@@ -1093,21 +1074,14 @@ function renderSelect(label, options, selectedValue) {
     <label>
       <span>${escapeHtml(label)}</span>
       <select name="${escapeHtml(label)}">
-        ${options.map((option) => `
-          <option value="${escapeAttribute(option)}"${option === selectedValue ? " selected" : ""}>${escapeHtml(option || "Blank")}</option>
-        `).join("")}
+        ${options.map((option) => `<option value="${escapeAttribute(option)}"${option === selectedValue ? " selected" : ""}>${escapeHtml(option || "Blank")}</option>`).join("")}
       </select>
     </label>
   `;
 }
 
 function renderTextarea(label, value = "", fullWidth = false) {
-  return `
-    <label class="${fullWidth ? "crm-full" : ""}">
-      <span>${escapeHtml(label)}</span>
-      <textarea name="${escapeHtml(label)}">${escapeHtml(value || "")}</textarea>
-    </label>
-  `;
+  return `<label class="${fullWidth ? "crm-full" : ""}"><span>${escapeHtml(label)}</span><textarea name="${escapeHtml(label)}">${escapeHtml(value || "")}</textarea></label>`;
 }
 
 function escapeHtml(value) {
@@ -1192,6 +1166,12 @@ async function refreshLeadsInBackground() {
   } catch {
     // Keep the optimistic local update if the background refresh fails.
   }
+}
+
+function scheduleQuietLeadRefresh() {
+  window.setTimeout(() => {
+    void refreshLeadsInBackground();
+  }, 4500);
 }
 
 function openLeadModal() {

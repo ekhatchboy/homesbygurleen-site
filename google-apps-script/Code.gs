@@ -225,7 +225,6 @@ function doPost(e) {
 
     if (action === "updateLead") {
       authorizeCrm_(e, payload);
-      backupMasterLeadsDaily();
 
       return jsonResponse_({
         ok: true,
@@ -235,7 +234,6 @@ function doPost(e) {
 
     if (action === "createLead") {
       authorizeCrm_(e, payload);
-      backupMasterLeadsDaily();
 
       return jsonResponse_({
         ok: true,
@@ -1310,14 +1308,12 @@ function handleLeadUpdate_(payload) {
     throw new Error("Lead ID column not found");
   }
 
-  const leadIds = sheet.getRange(2, leadIdColumn, Math.max(sheet.getLastRow() - 1, 1), 1).getValues();
-  const rowOffset = leadIds.findIndex(([value]) => String(value).trim() === leadId);
+  const rowNumber = findLeadRowById_(sheet, leadIdColumn, leadId);
 
-  if (rowOffset === -1) {
+  if (!rowNumber) {
     throw new Error("Lead not found");
   }
 
-  const rowNumber = rowOffset + 2;
   const writableFields = [
     "Lead Type",
     "Name",
@@ -1497,15 +1493,30 @@ function handleLeadDelete_(payload) {
     throw new Error("Lead not found");
   }
 
-  const leadIds = sheet.getRange(2, leadIdColumn, dataRowCount, 1).getValues();
-  const rowOffset = leadIds.findIndex(([value]) => String(value).trim() === leadId);
+  const rowNumber = findLeadRowById_(sheet, leadIdColumn, leadId);
 
-  if (rowOffset === -1) {
+  if (!rowNumber) {
     throw new Error("Lead not found");
   }
 
-  sheet.deleteRow(rowOffset + 2);
+  sheet.deleteRow(rowNumber);
   return leadId;
+}
+
+function findLeadRowById_(sheet, leadIdColumn, leadId) {
+  const dataRowCount = Math.max(sheet.getLastRow() - 1, 0);
+
+  if (!dataRowCount) {
+    return 0;
+  }
+
+  const match = sheet
+    .getRange(2, leadIdColumn, dataRowCount, 1)
+    .createTextFinder(leadId)
+    .matchEntireCell(true)
+    .findNext();
+
+  return match ? match.getRow() : 0;
 }
 
 function normalizeIncomingDate_(value) {

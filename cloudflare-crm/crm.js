@@ -422,7 +422,7 @@ async function saveLead(leadId, formData) {
     if (result.lead && result.lead["Lead ID"]) {
       upsertLeadInState(result.lead);
       applyFilters();
-      void refreshLeadsInBackground();
+      scheduleQuietLeadRefresh();
     } else {
       await loadLeads();
     }
@@ -482,7 +482,7 @@ async function handleCreateLeadSubmit(event) {
       closeLeadModal({ reset: true });
       applyFilters();
       elements.statusText.textContent = "Lead added successfully.";
-      void refreshLeadsInBackground();
+      scheduleQuietLeadRefresh();
     } else {
       throw new Error("Lead was created, but no record was returned.");
     }
@@ -1004,7 +1004,7 @@ async function saveLeadPatch(payload) {
     if (result.lead && result.lead["Lead ID"]) {
       upsertLeadInState(result.lead);
       applyFilters();
-      void refreshLeadsInBackground();
+      scheduleQuietLeadRefresh();
     } else {
       await loadLeads();
     }
@@ -1166,6 +1166,12 @@ async function refreshLeadsInBackground() {
   } catch {
     // Keep the optimistic local update if the background refresh fails.
   }
+}
+
+function scheduleQuietLeadRefresh() {
+  window.setTimeout(() => {
+    void refreshLeadsInBackground();
+  }, 4500);
 }
 
 function openLeadModal() {
