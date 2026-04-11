@@ -89,6 +89,23 @@ function backupMasterLeads() {
 }
 
 function backupMasterLeadsDaily() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const backupName = "Master Leads Backup";
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  const backupKey = "MASTER_LEADS_ROLLING_BACKUP_DATE";
+  const properties = PropertiesService.getScriptProperties();
+  const lastBackupDate = properties.getProperty(backupKey);
+
+  if (lastBackupDate === today && spreadsheet.getSheetByName(backupName)) {
+    return backupName;
+  }
+
+  const name = syncRollingMasterLeadsBackup_();
+  properties.setProperty(backupKey, today);
+  return name;
+}
+
+function refreshMasterLeadsBackup() {
   return syncRollingMasterLeadsBackup_();
 }
 
@@ -171,7 +188,7 @@ function doGet(e) {
 
     if (mode === "leads") {
       authorizeCrm_(e);
-      setupSheets();
+      getMasterLeadSheet_();
 
       return jsonResponse_({
         ok: true,
@@ -181,7 +198,7 @@ function doGet(e) {
 
     if (mode === "mapHomes") {
       authorizeCrm_(e);
-      setupSheets();
+      ensureHomeMapSheet_();
 
       return jsonResponse_({
         ok: true,
@@ -208,7 +225,6 @@ function doPost(e) {
 
     if (action === "updateLead") {
       authorizeCrm_(e, payload);
-      setupSheets();
       backupMasterLeadsDaily();
 
       return jsonResponse_({
@@ -219,7 +235,6 @@ function doPost(e) {
 
     if (action === "createLead") {
       authorizeCrm_(e, payload);
-      setupSheets();
       backupMasterLeadsDaily();
 
       return jsonResponse_({
@@ -230,7 +245,6 @@ function doPost(e) {
 
     if (action === "deleteLead") {
       authorizeCrm_(e, payload);
-      setupSheets();
       backupMasterLeadsDaily();
 
       return jsonResponse_({
@@ -241,7 +255,7 @@ function doPost(e) {
 
     if (action === "upsertMapHome") {
       authorizeCrm_(e, payload);
-      setupSheets();
+      ensureHomeMapSheet_();
 
       return jsonResponse_({
         ok: true,
@@ -251,7 +265,7 @@ function doPost(e) {
 
     if (action === "deleteMapHome") {
       authorizeCrm_(e, payload);
-      setupSheets();
+      ensureHomeMapSheet_();
 
       return jsonResponse_({
         ok: true,
@@ -434,7 +448,13 @@ function ensureMasterHeaders_(sheet) {
     sheet.deleteColumns(MASTER_HEADER_ROW.length + 1, maxColumns - MASTER_HEADER_ROW.length);
   }
 
-  sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).setValues([MASTER_HEADER_ROW]);
+  const headerRange = sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length);
+  const currentHeaders = headerRange.getValues()[0].map((value) => String(value || ""));
+  const headersAreCurrent = MASTER_HEADER_ROW.every((header, index) => currentHeaders[index] === header);
+
+  if (!headersAreCurrent) {
+    headerRange.setValues([MASTER_HEADER_ROW]);
+  }
 }
 
 function formatMasterLeadSheet_(sheet) {
@@ -1299,6 +1319,7 @@ function handleLeadUpdate_(payload) {
 
   const rowNumber = rowOffset + 2;
   const writableFields = [
+    "Lead Type",
     "Name",
     "Phone",
     "Email",
@@ -1323,6 +1344,10 @@ function handleLeadUpdate_(payload) {
     "Seller Contract Expiration Date"
   ];
 
+  const rowRange = sheet.getRange(rowNumber, 1, 1, MASTER_HEADER_ROW.length);
+  const rowValues = rowRange.getValues()[0];
+  let didChange = false;
+
   writableFields.forEach((field) => {
     if (Object.prototype.hasOwnProperty.call(payload, field)) {
       const column = headers.indexOf(field) + 1;
@@ -1334,12 +1359,16 @@ function handleLeadUpdate_(payload) {
         if (field === "Lead Type") {
           nextValue = normalizeLeadType_(nextValue);
         }
-        sheet.getRange(rowNumber, column).setValue(nextValue);
+        rowValues[column - 1] = nextValue;
+        didChange = true;
       }
     }
   });
 
-  applyLeadRowValidations_(sheet, rowNumber);
+  if (didChange) {
+    rowRange.setValues([rowValues]);
+  }
+
   return getLeadRecordByRow_(sheet, rowNumber, headers);
 }
 
