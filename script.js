@@ -49,7 +49,7 @@ const demoReplies = [
       "Of course. What area are they looking in, what timeline do they have, and what's your name and best contact info for follow-up?"
   },
   {
-    test: (text) => !leadProfile.timeline && /\b(summer|asap|soon|month|weeks|timeline)\b/i.test(text),
+    test: (text) => !leadProfile.timeline && isTimelineAnswer_(text),
     reply:
       "Good to know. Are you already pre-approved, or still exploring financing?"
   },
@@ -246,8 +246,8 @@ function updateLeadProfile(text) {
     leadProfile.intent = "referral";
   }
 
-  if (!leadProfile.timeline && /\b(asap|soon|month|summer|spring|fall|winter|week)\b/i.test(text)) {
-    leadProfile.timeline = text;
+  if (!leadProfile.timeline && isTimelineAnswer_(text)) {
+    leadProfile.timeline = normalizedText;
   }
 
   if (!leadProfile.area && /\b(in|near|around)\s+[a-z]/i.test(text)) {
@@ -256,7 +256,8 @@ function updateLeadProfile(text) {
     !leadProfile.area &&
     leadProfile.intent &&
     /^[A-Za-z][A-Za-z\s,'.-]{1,40}$/.test(normalizedText) &&
-    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|relocate|relocating|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|email|phone|call|text)\b/i.test(normalizedText)
+    !isTimelineAnswer_(normalizedText) &&
+    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|relocate|relocating|asap|soon|month|summer|spring|fall|winter|week|year|budget|cash|approved|pre-approved|email|phone|call|text)\b/i.test(normalizedText)
   ) {
     leadProfile.area = normalizedText;
   }
@@ -297,12 +298,17 @@ function inferName_(text) {
 
   if (
     /^[A-Za-z][A-Za-z' -]{1,40}$/.test(text) &&
-    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|relocate|relocating|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|email|phone|call|text|contact|merced|atwater)\b/i.test(text)
+    !isTimelineAnswer_(text) &&
+    !/\b(buy|buying|buyer|sell|selling|seller|referral|referrals|referred|relocation|relocate|relocating|asap|soon|month|summer|spring|fall|winter|week|year|budget|cash|approved|pre-approved|email|phone|call|text|contact|merced|atwater)\b/i.test(text)
   ) {
     return cleanName_(text);
   }
 
   return "";
+}
+
+function isTimelineAnswer_(text) {
+  return /\b(asap|soon|immediately|now|today|tomorrow|week|weeks|month|months|year|years|timeline|spring|summer|fall|autumn|winter|quarter|q[1-4]|this year|next year|later this year|early next year|end of the year|before the end of the year|by the end of the year|within the year|in a few months|couple months|few months|3 months|6 months|12 months)\b/i.test(String(text || ""));
 }
 
 function cleanName_(value) {
@@ -328,6 +334,10 @@ function shouldUseLiveAI(message) {
   );
 
   if (isOpeningIntentAnswer) {
+    return false;
+  }
+
+  if (isTimelineAnswer_(normalized) && wordCount <= 6) {
     return false;
   }
 
