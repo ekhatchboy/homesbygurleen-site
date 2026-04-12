@@ -120,6 +120,14 @@ function appendMessage(role, text) {
 }
 
 function getDemoReply(text) {
+  if (!leadProfile.intent && /\b(buy|buying|buyer|purchase|purchasing|home search|house hunt)\b/i.test(text)) {
+    leadProfile.intent = "buyer";
+  } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation|value my home)\b/i.test(text)) {
+    leadProfile.intent = "seller";
+  } else if (!leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text)) {
+    leadProfile.intent = "referral";
+  }
+
   const matchedReply = demoReplies.find((item) => item.test(text));
 
   if (matchedReply) {
@@ -290,7 +298,6 @@ function shouldUseLiveAI(message) {
 
   const wordCount = normalized.split(/\s+/).length;
   const looksLikeQuestion = /[?]|\b(can|could|do|does|is|are|what|when|where|why|how|which|who)\b/i.test(normalized);
-  const hasRoutineLeadSignal = /\b(buy|buying|buyer|purchase|sell|selling|seller|listing|valuation|referral|referrals|invest|investor|asap|soon|month|summer|spring|fall|winter|week|budget|cash|approved|pre-approved|merced|atwater|livingston|los banos|galt|sacramento|elk grove)\b|\S+@\S+\.\S+|\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/i.test(normalized);
   const alreadyQualified = Boolean(
     leadProfile.intent &&
     leadProfile.area &&
@@ -298,15 +305,11 @@ function shouldUseLiveAI(message) {
     leadProfile.contact
   );
 
-  if (hasRoutineLeadSignal && !looksLikeQuestion && !alreadyQualified) {
-    return false;
-  }
-
-  if (liveReplyCount === 0 && (looksLikeQuestion || wordCount >= 18)) {
+  if (liveReplyCount === 0) {
     return true;
   }
 
-  if (looksLikeQuestion || wordCount >= 18) {
+  if (looksLikeQuestion || wordCount >= 16) {
     return true;
   }
 
