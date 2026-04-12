@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 const geminiClient = process.env.GEMINI_API_KEY
   ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
   : null;
+const PROVIDER_TIMEOUT_MS = Number(process.env.AI_PROVIDER_TIMEOUT_MS || 7000);
 
 const businessConfig = {
   realtorName: process.env.REALTOR_NAME || "Gurleen Chahal",
@@ -35,16 +36,6 @@ export default async function handler(request, response) {
       return response.status(500).json({
         error: "No AI provider is currently available.",
         details: "Add a Gemini, OpenRouter, or OpenAI API key."
-      });
-    }
-
-    if (shouldForwardLead(leadProfile) && businessConfig.webhookUrl) {
-      await forwardLead({
-        message,
-        reply: result.reply,
-        leadProfile,
-        transcript,
-        businessConfig
       });
     }
 
@@ -125,10 +116,13 @@ async function tryGeminiResponse(prompt) {
     return null;
   }
 
-  const aiResponse = await geminiClient.models.generateContent({
-    model: process.env.GEMINI_MODEL || "gemini-3-flash-preview",
-    contents: prompt
-  });
+  const aiResponse = await withTimeout_(
+    geminiClient.models.generateContent({
+      model: process.env.GEMINI_MODEL || "gemini-3-flash-preview",
+      contents: prompt
+    }),
+    "Gemini timed out."
+  );
 
   const reply = String(aiResponse.text || "").trim();
   if (!reply) {
@@ -151,7 +145,7 @@ async function tryOpenRouterResponse(prompt) {
   const errors = [];
 
   for (const model of models) {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetchWithTimeout_("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -198,7 +192,7 @@ async function tryOpenAIResponse(prompt) {
     return null;
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetchWithTimeout_("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -239,7 +233,7 @@ async function tryGroqResponse(prompt) {
     return null;
   }
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const response = await fetchWithTimeout_("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -272,6 +266,35 @@ async function tryGroqResponse(prompt) {
     reply,
     provider: "Groq"
   };
+}
+
+async function fetchWithTimeout_(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function withTimeout_(promise, message) {
+  let timeout;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(message || "Provider timed out.")), PROVIDER_TIMEOUT_MS);
+      })
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function summarizeLeadProfile(leadProfile) {
