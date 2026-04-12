@@ -101,8 +101,7 @@ chatForm.addEventListener("submit", async (event) => {
   setAssistantStatus("Demo Fallback");
   window.setTimeout(() => {
     const reply = getDemoReply(message);
-    appendMessage("assistant", reply);
-    transcript.push({ role: "assistant", content: reply });
+    appendAssistantReply(reply);
     void maybeForwardLead(message);
   }, 150);
 });
@@ -119,15 +118,37 @@ function appendMessage(role, text) {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-function getDemoReply(text) {
-  if (!leadProfile.intent && /\b(buy|buying|buyer|purchase|purchasing|home search|house hunt)\b/i.test(text)) {
-    leadProfile.intent = "buyer";
-  } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation|value my home)\b/i.test(text)) {
-    leadProfile.intent = "seller";
-  } else if (!leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text)) {
-    leadProfile.intent = "referral";
+function appendAssistantReply(reply) {
+  const nextReply = avoidRepeatedReply_(reply);
+  appendMessage("assistant", nextReply);
+  transcript.push({ role: "assistant", content: nextReply });
+}
+
+function avoidRepeatedReply_(reply) {
+  const text = String(reply || "").trim();
+  const lastAssistant = [...transcript].reverse().find((entry) => entry.role === "assistant");
+  const lastText = String(lastAssistant?.content || "").trim();
+
+  if (!text || text !== lastText) {
+    return text;
   }
 
+  if (leadProfile.intent === "buyer") {
+    return "Great. What area, timeline, and budget range should I share with Gurleen?";
+  }
+
+  if (leadProfile.intent === "seller") {
+    return "Great. What city is the home in, and what timeline are you thinking about?";
+  }
+
+  if (leadProfile.intent === "referral") {
+    return "Great. What area is the referral focused on, and what is the best contact info for follow-up?";
+  }
+
+  return "Thanks. What is the best way for Gurleen to follow up with you?";
+}
+
+function getDemoReply(text) {
   const matchedReply = demoReplies.find((item) => item.test(text));
 
   if (matchedReply) {
@@ -217,9 +238,9 @@ function getDemoReply(text) {
 function updateLeadProfile(text) {
   const normalizedText = text.trim();
 
-  if (!leadProfile.intent && /\b(buy|buying|buyer|purchase)\b/i.test(text)) {
+  if (!leadProfile.intent && /\b(buy|buying|buyer|purchase|purchasing|home search|house hunt|looking for a home|looking to buy)\b/i.test(text)) {
     leadProfile.intent = "buyer";
-  } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation)\b/i.test(text)) {
+  } else if (!leadProfile.intent && /\b(sell|selling|seller|listing|valuation|value my home)\b/i.test(text)) {
     leadProfile.intent = "seller";
   } else if (!leadProfile.intent && /\b(referral|referrals|referred|relocation|relocate|relocating)\b/i.test(text)) {
     leadProfile.intent = "referral";
@@ -298,12 +319,17 @@ function shouldUseLiveAI(message) {
 
   const wordCount = normalized.split(/\s+/).length;
   const looksLikeQuestion = /[?]|\b(can|could|do|does|is|are|what|when|where|why|how|which|who)\b/i.test(normalized);
+  const isOpeningIntentAnswer = transcript.length <= 2 && Boolean(leadProfile.intent) && wordCount <= 10 && !looksLikeQuestion;
   const alreadyQualified = Boolean(
     leadProfile.intent &&
     leadProfile.area &&
     leadProfile.timeline &&
     leadProfile.contact
   );
+
+  if (isOpeningIntentAnswer) {
+    return false;
+  }
 
   if (liveReplyCount === 0) {
     return true;
@@ -342,8 +368,7 @@ async function sendToLiveAgent(message) {
     const data = await response.json();
     setAssistantStatus(data.provider ? `${data.provider} Live` : "Live AI");
     const reply = data.reply || "I'm here and ready to help.";
-    appendMessage("assistant", reply);
-    transcript.push({ role: "assistant", content: reply });
+    appendAssistantReply(reply);
     liveReplyCount += 1;
     void maybeForwardLead(message);
     return true;
