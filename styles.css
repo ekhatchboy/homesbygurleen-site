@@ -503,31 +503,6 @@ body::before {
   max-width: 28ch;
 }
 
-.quick-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 4px 0 16px;
-}
-
-.quick-action {
-  border: 1px solid rgba(77, 50, 32, 0.12);
-  background: rgba(255, 251, 245, 0.85);
-  color: var(--ink);
-  border-radius: 999px;
-  padding: 10px 14px;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 180ms ease, background 180ms ease;
-}
-
-.quick-action:hover {
-  transform: translateY(-1px);
-  background: rgba(232, 220, 200, 0.8);
-}
-
 .assistant-header {
   display: flex;
   justify-content: space-between;
@@ -1105,8 +1080,4 @@ body::before {
     max-width: 100%;
   }
 
-  .quick-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
 }

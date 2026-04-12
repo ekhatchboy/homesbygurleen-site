@@ -2,7 +2,6 @@ const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
 const chatWindow = document.getElementById("chatWindow");
 const statusPill = document.querySelector(".status-pill");
-const quickActions = document.querySelectorAll(".quick-action");
 
 const config = {
   mode: "live-preferred",
@@ -106,13 +105,6 @@ chatForm.addEventListener("submit", async (event) => {
     transcript.push({ role: "assistant", content: reply });
     void maybeForwardLead(message);
   }, 450);
-});
-
-quickActions.forEach((button) => {
-  button.addEventListener("click", () => {
-    chatInput.value = button.dataset.prompt || "";
-    chatInput.focus();
-  });
 });
 
 function appendMessage(role, text) {
