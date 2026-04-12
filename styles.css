@@ -217,7 +217,6 @@ body::before {
 .hero-copy,
 .hero-card,
 .assistant-panel,
-.notes-card,
 .contact-card,
 .journey-copy,
 .journey-panel,
@@ -263,7 +262,6 @@ body::before {
 .section-heading p,
 .contact-copy p,
 .assistant-header p,
-.notes-card li,
 .journey-card p,
 .notes-list li,
 .intake-card label,
@@ -354,12 +352,6 @@ body::before {
   border: 1px solid var(--line);
 }
 
-.notes-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
 .hero-card {
   display: grid;
   gap: 18px;
@@ -393,17 +385,9 @@ body::before {
 
 .stat-label,
 .mini-grid span,
-.assistant-header strong,
-.notes-card h3 {
+.assistant-header strong {
   display: block;
   margin-bottom: 8px;
-}
-
-.notes-kicker {
-  margin: 0 0 12px;
-  color: var(--ink);
-  font-size: 0.92rem;
-  font-weight: 500;
 }
 
 .stat-card strong {
@@ -456,35 +440,12 @@ body::before {
 }
 
 .assistant-layout {
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 
 .assistant-panel {
   padding: 20px;
-}
-
-.assistant-notes {
-  display: grid;
-  gap: 18px;
-}
-
-.notes-card-highlight {
-  padding: 26px;
-  background: linear-gradient(180deg, rgba(255, 251, 246, 0.96), rgba(240, 231, 221, 0.88));
-}
-
-.notes-card-highlight h3 {
-  margin: 0 0 14px;
-  font-size: clamp(2rem, 3.2vw, 3rem);
-  line-height: 1.08;
-}
-
-.notes-card-highlight p:last-child {
-  margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.75;
-  max-width: 28ch;
 }
 
 .assistant-header {
@@ -496,12 +457,46 @@ body::before {
 }
 
 .status-pill {
-  padding: 8px 12px;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  padding: 0;
   border-radius: 999px;
-  background: rgba(102, 116, 97, 0.12);
-  color: var(--sage);
-  font-size: 0.85rem;
-  font-weight: 800;
+  background: #d6a43f;
+  box-shadow:
+    0 0 0 6px rgba(214, 164, 63, 0.14),
+    0 0 18px rgba(214, 164, 63, 0.4);
+  flex: 0 0 auto;
+}
+
+.status-pill::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.status-pill.is-live {
+  background: #5f9f5f;
+  box-shadow:
+    0 0 0 6px rgba(95, 159, 95, 0.14),
+    0 0 18px rgba(95, 159, 95, 0.42);
+}
+
+.status-pill.is-fallback,
+.status-pill.is-checking {
+  background: #d6a43f;
+  box-shadow:
+    0 0 0 6px rgba(214, 164, 63, 0.14),
+    0 0 18px rgba(214, 164, 63, 0.4);
+}
+
+.status-pill.is-offline {
+  background: #b85b4f;
+  box-shadow:
+    0 0 0 6px rgba(184, 91, 79, 0.14),
+    0 0 18px rgba(184, 91, 79, 0.38);
 }
 
 .chat-window {
@@ -565,36 +560,6 @@ body::before {
 .contact-card select:focus {
   outline: 2px solid rgba(157, 95, 63, 0.18);
   border-color: rgba(157, 95, 63, 0.4);
-}
-
-.assistant-notes {
-  display: grid;
-  gap: 16px;
-}
-
-.notes-card {
-  padding: 22px;
-}
-
-.notes-card ul {
-  display: grid;
-  gap: 12px;
-}
-
-.notes-card li {
-  position: relative;
-  padding-left: 18px;
-}
-
-.notes-card li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 11px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 
 .contact-section {

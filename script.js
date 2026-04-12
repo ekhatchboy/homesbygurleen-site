@@ -395,6 +395,29 @@ function markLeadForwarded() {
 
 function setAssistantStatus(label) {
   if (statusPill) {
-    statusPill.textContent = label;
+    const statusLabel = String(label || "Checking AI status").trim();
+    statusPill.innerHTML = `<span class="sr-only">${escapeHtml(statusLabel)}</span>`;
+    statusPill.setAttribute("aria-label", statusLabel);
+    statusPill.setAttribute("title", statusLabel);
+    statusPill.classList.remove("is-live", "is-fallback", "is-offline", "is-checking");
+
+    if (/live|captured/i.test(statusLabel)) {
+      statusPill.classList.add("is-live");
+    } else if (/unavailable|error|offline/i.test(statusLabel)) {
+      statusPill.classList.add("is-offline");
+    } else if (/fallback|demo|connecting|checking/i.test(statusLabel)) {
+      statusPill.classList.add("is-fallback");
+    } else {
+      statusPill.classList.add("is-checking");
+    }
   }
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
