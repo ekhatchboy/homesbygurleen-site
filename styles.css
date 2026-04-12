@@ -220,7 +220,6 @@ body::before {
 .contact-card,
 .journey-copy,
 .journey-panel,
-.journey-card,
 .intake-card,
 .form-embed-card {
   border: 1px solid var(--line);
@@ -262,7 +261,6 @@ body::before {
 .section-heading p,
 .contact-copy p,
 .assistant-header p,
-.journey-card p,
 .notes-list li,
 .intake-card label,
 .contact-card label {
@@ -786,7 +784,6 @@ body::before {
 }
 
 .journey-hero,
-.journey-grid,
 .intake-section {
   margin-bottom: 36px;
 }
@@ -800,7 +797,6 @@ body::before {
 
 .journey-copy,
 .journey-panel,
-.journey-card,
 .intake-card {
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -870,37 +866,6 @@ body::before {
   height: 7px;
   border-radius: 50%;
   background: var(--accent);
-}
-
-.journey-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.journey-card {
-  padding: 22px;
-}
-
-.journey-card span {
-  display: inline-flex;
-  margin-bottom: 12px;
-  color: var(--gold);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
-
-.journey-card h3 {
-  margin: 0 0 10px;
-  font-family: "Cormorant Garamond", serif;
-  font-size: 1.8rem;
-}
-
-.journey-card p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.65;
 }
 
 .intake-card {
@@ -974,7 +939,6 @@ body::before {
   .instagram-showcase,
   .pathways,
   .journey-hero,
-  .journey-grid,
   .intake-card {
     grid-template-columns: 1fr;
   }
