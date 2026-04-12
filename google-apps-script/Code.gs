@@ -89,18 +89,11 @@ function backupMasterLeads() {
 }
 
 function backupMasterLeadsDaily() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const backupName = "Master Leads Backup";
   const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
   const backupKey = "MASTER_LEADS_ROLLING_BACKUP_DATE";
   const properties = PropertiesService.getScriptProperties();
-  const lastBackupDate = properties.getProperty(backupKey);
-
-  if (lastBackupDate === today && spreadsheet.getSheetByName(backupName)) {
-    return backupName;
-  }
-
   const name = syncRollingMasterLeadsBackup_();
+
   properties.setProperty(backupKey, today);
   return name;
 }
