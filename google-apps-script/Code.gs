@@ -232,6 +232,15 @@ function doPost(e) {
       });
     }
 
+    if (action === "bulkUpdateFollowUps") {
+      authorizeCrm_(e, payload);
+
+      return jsonResponse_({
+        ok: true,
+        leads: handleBulkFollowUpUpdate_(payload)
+      });
+    }
+
     if (action === "createLead") {
       authorizeCrm_(e, payload);
 
@@ -243,7 +252,6 @@ function doPost(e) {
 
     if (action === "deleteLead") {
       authorizeCrm_(e, payload);
-      backupMasterLeadsDaily();
 
       return jsonResponse_({
         ok: true,
@@ -1366,6 +1374,74 @@ function handleLeadUpdate_(payload) {
   }
 
   return getLeadRecordByRow_(sheet, rowNumber, headers);
+}
+
+function handleBulkFollowUpUpdate_(payload) {
+  const updates = Array.isArray(payload.updates) ? payload.updates : [];
+
+  if (!updates.length) {
+    throw new Error("No follow-up updates were provided");
+  }
+
+  const sheet = getMasterLeadSheet_();
+  const headers = sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).getValues()[0];
+  const leadIdColumn = headers.indexOf("Lead ID") + 1;
+  const nextFollowUpColumn = headers.indexOf("Next Follow-Up Date") + 1;
+
+  if (!leadIdColumn || !nextFollowUpColumn) {
+    throw new Error("Required lead columns were not found");
+  }
+
+  const dataRowCount = Math.max(sheet.getLastRow() - 1, 0);
+
+  if (!dataRowCount) {
+    throw new Error("No leads were found to update");
+  }
+
+  const idValues = sheet.getRange(2, leadIdColumn, dataRowCount, 1).getValues();
+  const followUpValues = sheet.getRange(2, nextFollowUpColumn, dataRowCount, 1).getValues();
+  const rowsByLeadId = {};
+
+  idValues.forEach((row, index) => {
+    const leadId = String(row[0] || "").trim();
+
+    if (leadId) {
+      rowsByLeadId[leadId] = index;
+    }
+  });
+
+  const updatedRowNumbers = [];
+  const updatedLeads = [];
+
+  updates.forEach((update) => {
+    const leadId = String(update && update.leadId ? update.leadId : "").trim();
+    const nextFollowUpDate = normalizeIncomingDate_(update && update.nextFollowUpDate);
+
+    if (!leadId || !nextFollowUpDate) {
+      return;
+    }
+
+    const rowIndex = rowsByLeadId[leadId];
+
+    if (rowIndex === undefined) {
+      return;
+    }
+
+    followUpValues[rowIndex][0] = nextFollowUpDate;
+    updatedRowNumbers.push(rowIndex + 2);
+  });
+
+  if (!updatedRowNumbers.length) {
+    throw new Error("No matching leads were found to update");
+  }
+
+  sheet.getRange(2, nextFollowUpColumn, dataRowCount, 1).setValues(followUpValues);
+
+  updatedRowNumbers.forEach((rowNumber) => {
+    updatedLeads.push(getLeadRecordByRow_(sheet, rowNumber, headers));
+  });
+
+  return updatedLeads;
 }
 
 function handleLeadCreate_(payload) {

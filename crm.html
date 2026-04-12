@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRM Dashboard | Homes By Gurleen</title>
+  <title>Homes By Gurleen CRM</title>
   <meta
     name="description"
     content="Private Homes By Gurleen CRM dashboard backed by Google Sheets."
@@ -14,45 +14,39 @@
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   >
-  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="crm.css">
 </head>
-<body class="site-background">
+<body>
   <div class="page-shell">
-    <header class="topbar crm-topbar">
+    <header class="topbar">
       <div class="brand-block">
         <p class="eyebrow">Private CRM</p>
-        <a href="index.html" class="brand brand-with-logo">
+        <div class="brand-lockup">
           <img src="hbg-logo-transparent-black.png" alt="HBG Homes By Gurleen logo" class="brand-logo">
-          <span class="brand-text-wrap">
-            <span class="eyebrow">Homes By Gurleen</span>
-          </span>
-        </a>
+          <div class="brand-text">Homes By Gurleen</div>
+        </div>
       </div>
-      <nav class="nav">
-        <a href="index.html">Public Site</a>
-        <a href="buyers.html">Buyers</a>
-        <a href="sellers.html">Sellers</a>
-        <a href="contact.html">Contact</a>
-        <a href="crm-map.html">Property Map</a>
-      </nav>
+      <div class="topbar-actions">
+        <a class="button button-secondary" href="crm-map.html">Property Map</a>
+        <div class="topbar-note">Google Sheets powered dashboard</div>
+      </div>
     </header>
 
     <main class="crm-shell">
       <section class="crm-hero">
         <div class="crm-copy">
-          <p class="hero-kicker">Sheet-backed workflow</p>
+          <p class="hero-kicker">Cloudflare Pages CRM</p>
           <h1>Welcome Gurleen,<br>Your Future Success Awaits You</h1>
           <p class="hero-text">
-            This dashboard reads from your Google Sheet, gives you a cleaner pipeline than raw tabs, and lets you update
-            lead status, follow-up rank, notes, and next steps without leaving the page.
+            This dashboard reads from your Google Sheet, lets you filter and update leads, and keeps follow-up work
+            organized without needing a full HubSpot subscription.
           </p>
         </div>
         <div class="crm-status-card">
           <div class="crm-status-head">
             <div>
               <span class="crm-status-label">Live source</span>
-              <strong>Google Sheets CRM</strong>
+              <strong>Master Leads</strong>
             </div>
             <span class="crm-status-dot">Synced</span>
           </div>
@@ -74,7 +68,7 @@
         </div>
       </section>
 
-      <section class="crm-summary" id="crmSummary">
+      <section class="crm-summary">
         <article class="crm-metric">
           <span>Total leads</span>
           <strong id="metricTotal">0</strong>
@@ -99,7 +93,19 @@
             <p class="hero-kicker">Pipeline Board</p>
             <h2>See the whole book of business at a glance.</h2>
           </div>
-          <p class="crm-detail-note">Click a lead card to jump straight into follow-up details.</p>
+          <div class="crm-pipeline-tools">
+            <p class="crm-detail-note">Click a lead card to jump straight into follow-up details.</p>
+            <div class="crm-bulk-actions">
+              <button type="button" class="button button-secondary" id="toggleBulkPipelineButton">Select Multiple</button>
+              <select class="crm-action-select" id="bulkFollowUpDelaySelect" aria-label="Choose bulk follow-up delay" hidden>
+                <option value="2">Push by 2 Days</option>
+                <option value="7">Push by 1 Week</option>
+                <option value="14">Push by 2 Weeks</option>
+                <option value="30">Push by 1 Month</option>
+              </select>
+              <button type="button" class="button button-primary" id="bulkFollowUpButton" hidden>Update Selected</button>
+            </div>
+          </div>
         </div>
         <div class="crm-pipeline-board" id="pipelineBoard">
           <div class="crm-empty-state">Loading pipeline...</div>
@@ -112,7 +118,7 @@
           <div class="crm-card-heading">
             <h2>Lead list</h2>
             <div class="crm-card-actions">
-              <button type="button" class="button button-secondary crm-refresh" id="refreshLeadsButton">Refresh</button>
+              <button type="button" class="button button-secondary" id="refreshLeadsButton">Refresh</button>
               <button type="button" class="button button-primary" id="openLeadModalButton">+ Add Lead</button>
             </div>
           </div>
@@ -152,7 +158,7 @@
           </div>
 
           <div class="crm-lead-list" id="leadList">
-            <div class="crm-empty-state">Loading leads…</div>
+            <div class="crm-empty-state">Loading leads...</div>
           </div>
         </aside>
 

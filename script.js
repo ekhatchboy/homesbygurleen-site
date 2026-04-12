@@ -413,6 +413,7 @@ async function maybeForwardLead(message) {
 
     lastForwardedLeadKey = forwardKey;
     setAssistantStatus("Lead Captured");
+    appendAssistantReply("Thanks, I sent your details to Gurleen. She can follow up with you personally from here.");
   } catch (error) {
     console.error(error);
   }

@@ -1,9 +1,11 @@
-const state = {
+﻿const state = {
   leads: [],
   filteredLeads: [],
   selectedLeadId: "",
   isSaving: false,
-  quickView: "all"
+  quickView: "all",
+  isBulkPipelineMode: false,
+  selectedPipelineLeadIds: new Set()
 };
 
 const elements = {
@@ -27,7 +29,10 @@ const elements = {
   leadModal: document.querySelector("#leadModal"),
   closeLeadModalButton: document.querySelector("#closeLeadModalButton"),
   createLeadForm: document.querySelector("#createLeadForm"),
-  createLeadSubmitButton: document.querySelector("#createLeadSubmitButton")
+  createLeadSubmitButton: document.querySelector("#createLeadSubmitButton"),
+  toggleBulkPipelineButton: document.querySelector("#toggleBulkPipelineButton"),
+  bulkFollowUpDelaySelect: document.querySelector("#bulkFollowUpDelaySelect"),
+  bulkFollowUpButton: document.querySelector("#bulkFollowUpButton")
 };
 
 initialize();
@@ -44,6 +49,8 @@ function initialize() {
     });
   });
   elements.refreshButton?.addEventListener("click", loadLeads);
+  elements.toggleBulkPipelineButton?.addEventListener("click", toggleBulkPipelineMode);
+  elements.bulkFollowUpButton?.addEventListener("click", updateSelectedPipelineFollowUps);
   elements.openLeadModalButton?.addEventListener("click", openLeadModal);
   elements.closeLeadModalButton?.addEventListener("click", closeLeadModal);
   document.querySelectorAll("[data-close-lead-modal]").forEach((button) => {
@@ -333,17 +340,20 @@ function renderPipelineBoard() {
     return;
   }
 
+  syncBulkPipelineControls();
   const statuses = ["New", "Active", "Warm", "No Answer", "Contact", "Closed"];
 
   elements.pipelineBoard.innerHTML = statuses.map((status) => {
     const leads = state.filteredLeads.filter((lead) => lead["Lead Status"] === status);
     const leadMarkup = leads.map((lead) => {
       const isSelected = lead["Lead ID"] === state.selectedLeadId;
+      const isBulkSelected = state.selectedPipelineLeadIds.has(lead["Lead ID"]);
       const dueState = getDueState(lead["Next Follow-Up Date"]);
       const displayName = lead["Name"] || lead["Email"] || formatPhoneValue(lead["Phone"]) || "Unnamed lead";
 
       return `
-        <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
+        <button type="button" class="crm-pipeline-lead${isSelected ? " is-selected" : ""}${isBulkSelected ? " is-bulk-selected" : ""}" data-pipeline-lead-id="${escapeHtml(lead["Lead ID"])}">
+          ${state.isBulkPipelineMode ? `<span class="crm-pipeline-check" aria-hidden="true">${isBulkSelected ? "&#10003;" : ""}</span>` : ""}
           <strong>${escapeHtml(displayName)}</strong>
           <span>${escapeHtml(lead["Lead Type"] || "Lead")}</span>
           ${renderPipelineDuePill(dueState, lead)}
@@ -369,7 +379,19 @@ function renderPipelineBoard() {
 
   elements.pipelineBoard.querySelectorAll("[data-pipeline-lead-id]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedLeadId = button.getAttribute("data-pipeline-lead-id") || "";
+      const leadId = button.getAttribute("data-pipeline-lead-id") || "";
+
+      if (state.isBulkPipelineMode) {
+        if (state.selectedPipelineLeadIds.has(leadId)) {
+          state.selectedPipelineLeadIds.delete(leadId);
+        } else {
+          state.selectedPipelineLeadIds.add(leadId);
+        }
+        renderPipelineBoard();
+        return;
+      }
+
+      state.selectedLeadId = leadId;
       renderLeadList();
       renderPipelineBoard();
       renderSelectedLead();
@@ -383,6 +405,114 @@ function renderPipelineBoard() {
       applyFilters();
     });
   });
+}
+
+function syncBulkPipelineControls() {
+  const selectedCount = state.selectedPipelineLeadIds.size;
+
+  if (elements.toggleBulkPipelineButton) {
+    elements.toggleBulkPipelineButton.textContent = state.isBulkPipelineMode
+      ? `Cancel Selection (${selectedCount})`
+      : "Select Multiple";
+  }
+
+  [elements.bulkFollowUpDelaySelect, elements.bulkFollowUpButton].forEach((element) => {
+    if (element) {
+      element.hidden = !state.isBulkPipelineMode;
+      element.disabled = state.isSaving;
+    }
+  });
+
+  if (elements.bulkFollowUpButton) {
+    elements.bulkFollowUpButton.textContent = selectedCount
+      ? `Update ${selectedCount} Selected`
+      : "Update Selected";
+    elements.bulkFollowUpButton.disabled = state.isSaving || selectedCount === 0;
+  }
+}
+
+function toggleBulkPipelineMode() {
+  state.isBulkPipelineMode = !state.isBulkPipelineMode;
+
+  if (!state.isBulkPipelineMode) {
+    state.selectedPipelineLeadIds.clear();
+  }
+
+  renderPipelineBoard();
+}
+
+async function updateSelectedPipelineFollowUps() {
+  if (state.isSaving || !state.selectedPipelineLeadIds.size) {
+    return;
+  }
+
+  const delayDays = Number(elements.bulkFollowUpDelaySelect?.value || 2);
+  const updates = [...state.selectedPipelineLeadIds]
+    .map((leadId) => state.leads.find((lead) => lead["Lead ID"] === leadId))
+    .filter(Boolean)
+    .map((lead) => {
+      const baseDate = lead["Next Follow-Up Date"] ? new Date(lead["Next Follow-Up Date"]) : new Date();
+      return {
+        leadId: lead["Lead ID"],
+        nextFollowUpDate: toIsoDate(addDaysToDate(baseDate, delayDays))
+      };
+    });
+
+  if (!updates.length) {
+    return;
+  }
+
+  state.isSaving = true;
+  syncBulkPipelineControls();
+  elements.statusText.textContent = `Updating ${updates.length} follow-up dates.`;
+
+  try {
+    const response = await fetch("/crm/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "bulkUpdateFollowUps",
+        updates
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Unable to update selected follow-ups.");
+    }
+
+    const selectedLeadIdBeforeBulkUpdate = state.selectedLeadId;
+
+    if (Array.isArray(result.leads)) {
+      result.leads.forEach(upsertLeadInState);
+    } else {
+      updates.forEach((update) => {
+        const lead = state.leads.find((entry) => entry["Lead ID"] === update.leadId);
+        if (lead) {
+          lead["Next Follow-Up Date"] = update.nextFollowUpDate;
+        }
+      });
+    }
+
+    if (selectedLeadIdBeforeBulkUpdate && state.leads.some((lead) => lead["Lead ID"] === selectedLeadIdBeforeBulkUpdate)) {
+      state.selectedLeadId = selectedLeadIdBeforeBulkUpdate;
+    }
+
+    state.selectedPipelineLeadIds.clear();
+    state.isBulkPipelineMode = false;
+    applyFilters();
+    scheduleQuietLeadRefresh();
+    elements.statusText.textContent = `Updated ${updates.length} follow-up dates.`;
+  } catch (error) {
+    elements.statusText.textContent = error.message || "Unable to update selected follow-ups.";
+  } finally {
+    state.isSaving = false;
+    syncBulkPipelineControls();
+    renderPipelineBoard();
+  }
 }
 
 async function saveLead(leadId, formData) {
@@ -705,6 +835,7 @@ function buildTimelineEvents(lead) {
   if (lead["Date"]) {
     events.push({
       dateLabel: formatLongDate(lead["Date"]),
+      sortValue: getTimelineSortValue(lead["Date"]),
       title: "Lead entered the CRM",
       body: `${lead["Lead Type"] || "Lead"} from ${lead["Source"] || "unknown source"} was captured.`,
       tone: "is-neutral"
@@ -714,6 +845,7 @@ function buildTimelineEvents(lead) {
   if (lead["Last Contact Date"]) {
     events.push({
       dateLabel: formatLongDate(lead["Last Contact Date"]),
+      sortValue: getTimelineSortValue(lead["Last Contact Date"]),
       title: "Last contact logged",
       body: `Most recent outreach was marked on this date. Current status is ${lead["Lead Status"] || "New"}.`,
       tone: "is-complete"
@@ -724,6 +856,7 @@ function buildTimelineEvents(lead) {
     const dueState = getDueState(lead["Next Follow-Up Date"]);
     events.push({
       dateLabel: formatLongDate(lead["Next Follow-Up Date"]),
+      sortValue: getTimelineSortValue(lead["Next Follow-Up Date"]),
       title: "Next follow-up scheduled",
       body: `${dueState.label}. Priority is ${lead["Follow-Up Rank"] || "Rank A"}.`,
       tone: dueState.className === "is-overdue" ? "is-alert" : (dueState.className === "is-today" ? "is-today" : "is-upcoming")
@@ -733,13 +866,19 @@ function buildTimelineEvents(lead) {
   if (lead["Latest Message / Notes"]) {
     events.push({
       dateLabel: "Latest note",
+      sortValue: Number.MAX_SAFE_INTEGER,
       title: "Notes on file",
       body: truncateForTimeline(lead["Latest Message / Notes"]),
       tone: "is-note"
     });
   }
 
-  return events;
+  return events.sort((firstEvent, secondEvent) => (secondEvent.sortValue || 0) - (firstEvent.sortValue || 0));
+}
+
+function getTimelineSortValue(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 function truncateForTimeline(value) {
@@ -1028,9 +1167,17 @@ async function deleteLead(lead) {
     return;
   }
 
+  const previousLeads = [...state.leads];
+  const previousFilteredLeads = [...state.filteredLeads];
+  const previousSelectedLeadId = state.selectedLeadId;
+  const deletedLeadId = lead["Lead ID"];
+
   state.isSaving = true;
-  renderSelectedLead();
-  elements.statusText.textContent = "Deleting lead from your master sheet.";
+  state.leads = state.leads.filter((entry) => entry["Lead ID"] !== deletedLeadId);
+  state.filteredLeads = state.filteredLeads.filter((entry) => entry["Lead ID"] !== deletedLeadId);
+  state.selectedLeadId = state.filteredLeads[0]?.["Lead ID"] || state.leads[0]?.["Lead ID"] || "";
+  applyFilters();
+  elements.statusText.textContent = "Deleting lead.";
 
   try {
     const response = await fetch("/crm/update", {
@@ -1040,7 +1187,7 @@ async function deleteLead(lead) {
       },
       body: JSON.stringify({
         action: "deleteLead",
-        leadId: lead["Lead ID"]
+        leadId: deletedLeadId
       })
     });
 
@@ -1050,13 +1197,12 @@ async function deleteLead(lead) {
       throw new Error(result.error || "Unable to delete lead.");
     }
 
-    const deletedLeadId = result.leadId || lead["Lead ID"];
-    state.leads = state.leads.filter((entry) => entry["Lead ID"] !== deletedLeadId);
-    state.filteredLeads = state.filteredLeads.filter((entry) => entry["Lead ID"] !== deletedLeadId);
-    state.selectedLeadId = state.filteredLeads[0]?.["Lead ID"] || state.leads[0]?.["Lead ID"] || "";
-    applyFilters();
     elements.statusText.textContent = "Lead deleted.";
   } catch (error) {
+    state.leads = previousLeads;
+    state.filteredLeads = previousFilteredLeads;
+    state.selectedLeadId = previousSelectedLeadId;
+    applyFilters();
     elements.statusText.textContent = error.message || "Unable to delete lead.";
   } finally {
     state.isSaving = false;

@@ -93,7 +93,19 @@
             <p class="hero-kicker">Pipeline Board</p>
             <h2>See the whole book of business at a glance.</h2>
           </div>
-          <p class="crm-detail-note">Click a lead card to jump straight into follow-up details.</p>
+          <div class="crm-pipeline-tools">
+            <p class="crm-detail-note">Click a lead card to jump straight into follow-up details.</p>
+            <div class="crm-bulk-actions">
+              <button type="button" class="button button-secondary" id="toggleBulkPipelineButton">Select Multiple</button>
+              <select class="crm-action-select" id="bulkFollowUpDelaySelect" aria-label="Choose bulk follow-up delay" hidden>
+                <option value="2">Push by 2 Days</option>
+                <option value="7">Push by 1 Week</option>
+                <option value="14">Push by 2 Weeks</option>
+                <option value="30">Push by 1 Month</option>
+              </select>
+              <button type="button" class="button button-primary" id="bulkFollowUpButton" hidden>Update Selected</button>
+            </div>
+          </div>
         </div>
         <div class="crm-pipeline-board" id="pipelineBoard">
           <div class="crm-empty-state">Loading pipeline...</div>
