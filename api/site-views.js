@@ -5,8 +5,8 @@ const config = {
 };
 
 export default async function handler(request, response) {
-  if (request.method !== "GET") {
-    response.setHeader("Allow", "GET");
+  if (!["GET", "DELETE"].includes(request.method)) {
+    response.setHeader("Allow", "GET, DELETE");
     return response.status(405).json({ ok: false, error: "Method not allowed." });
   }
 
@@ -16,6 +16,10 @@ export default async function handler(request, response) {
 
   if (!config.sheetsUrl || !config.apiToken) {
     return response.status(500).json({ ok: false, error: "Site counter is not configured." });
+  }
+
+  if (request.method === "DELETE") {
+    return resetSiteStats(request, response);
   }
 
   try {
@@ -38,6 +42,30 @@ export default async function handler(request, response) {
   }
 }
 
+async function resetSiteStats(request, response) {
+  const resetDate = normalizeDate(request.query?.date || "");
+
+  try {
+    const upstream = await fetch(config.sheetsUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: resetDate ? "resetSiteStatsDay" : "resetSiteStats",
+        date: resetDate,
+        crmToken: config.apiToken,
+        webhookSecret: config.apiToken
+      })
+    });
+
+    const payload = await safeJson(upstream);
+    return response.status(upstream.ok ? 200 : 502).json(payload);
+  } catch (error) {
+    return response.status(500).json({ ok: false, error: error.message || "Unable to reset site counter." });
+  }
+}
+
 function isAuthorized(request) {
   if (!config.adminToken) {
     return false;
@@ -54,4 +82,9 @@ async function safeJson(upstream) {
   } catch {
     return { ok: false, error: "Invalid site counter response." };
   }
+}
+
+function normalizeDate(value) {
+  const text = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
 }
