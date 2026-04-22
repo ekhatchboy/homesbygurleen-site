@@ -47,9 +47,14 @@ export async function onRequestDelete(context) {
 }
 
 function isAuthorized(request, env) {
-  const token = env.SITE_COUNTER_ADMIN_TOKEN;
+  const allowedTokens = [
+    env.SITE_COUNTER_ADMIN_TOKEN,
+    env.SITE_COUNTER_API_TOKEN,
+    env.CRM_API_TOKEN,
+    env.LEAD_WEBHOOK_SECRET
+  ].map((value) => String(value || "").trim()).filter(Boolean);
 
-  if (!token) {
+  if (!allowedTokens.length) {
     return false;
   }
 
@@ -58,7 +63,7 @@ function isAuthorized(request, env) {
   const authHeader = request.headers.get("Authorization") || "";
   const bearerToken = authHeader.replace(/^Bearer\s+/i, "");
 
-  return queryToken === token || bearerToken === token;
+  return allowedTokens.includes(queryToken) || allowedTokens.includes(bearerToken);
 }
 
 function getSheetsConfig_(env) {

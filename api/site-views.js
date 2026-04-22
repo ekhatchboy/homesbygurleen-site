@@ -1,7 +1,12 @@
 const config = {
   sheetsUrl: process.env.SITE_COUNTER_SHEETS_URL || process.env.CRM_SHEETS_URL || process.env.LEAD_WEBHOOK_URL || "",
   apiToken: process.env.SITE_COUNTER_API_TOKEN || process.env.CRM_API_TOKEN || process.env.LEAD_WEBHOOK_SECRET || "",
-  adminToken: process.env.SITE_COUNTER_ADMIN_TOKEN || ""
+  adminToken: process.env.SITE_COUNTER_ADMIN_TOKEN || "",
+  fallbackTokens: [
+    process.env.SITE_COUNTER_API_TOKEN,
+    process.env.CRM_API_TOKEN,
+    process.env.LEAD_WEBHOOK_SECRET
+  ].filter(Boolean)
 };
 
 export default async function handler(request, response) {
@@ -67,13 +72,17 @@ async function resetSiteStats(request, response) {
 }
 
 function isAuthorized(request) {
-  if (!config.adminToken) {
+  const allowedTokens = [config.adminToken, ...config.fallbackTokens]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  if (!allowedTokens.length) {
     return false;
   }
 
   const queryToken = String(request.query?.token || "");
   const bearerToken = String(request.headers.authorization || "").replace(/^Bearer\s+/i, "");
-  return queryToken === config.adminToken || bearerToken === config.adminToken;
+  return allowedTokens.includes(queryToken) || allowedTokens.includes(bearerToken);
 }
 
 async function safeJson(upstream) {
