@@ -18,10 +18,68 @@ const dailyChart = document.querySelector("#dailyChart");
 const dailyStats = document.querySelector("#dailyStats");
 const pageStats = document.querySelector("#pageStats");
 const sourceStats = document.querySelector("#sourceStats");
+const resetStatsButton = document.querySelector("#resetStatsButton");
+const resetDayStatsButton = document.querySelector("#resetDayStatsButton");
+const resetStatsDate = document.querySelector("#resetStatsDate");
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  await loadStats();
+});
 
+resetStatsButton?.addEventListener("click", async () => {
+  await resetStats();
+});
+
+resetDayStatsButton?.addEventListener("click", async () => {
+  await resetStats(resetStatsDate?.value || "");
+});
+
+async function resetStats(date = "") {
+  const token = tokenInput.value.trim();
+  if (!token) {
+    statusText.textContent = "Enter the private counter token first.";
+    return;
+  }
+
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    statusText.textContent = "Choose a valid day to reset.";
+    return;
+  }
+
+  const confirmed = window.confirm(date
+    ? `Reset site stats for ${formatFriendlyDate(date)} only?`
+    : "Reset all site stats? This clears views, visits, top pages, and traffic sources.");
+  if (!confirmed) {
+    return;
+  }
+
+  statusText.textContent = date ? `Resetting stats for ${formatFriendlyDate(date)}.` : "Resetting site stats.";
+
+  try {
+    const resetUrl = new URL("/api/site-views", window.location.origin);
+    resetUrl.searchParams.set("token", token);
+    if (date) {
+      resetUrl.searchParams.set("date", date);
+    }
+
+    const response = await fetch(resetUrl.toString(), {
+      method: "DELETE"
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Unable to reset site stats.");
+    }
+
+    renderStats(payload.stats || buildEmptyStats());
+    statusText.textContent = date ? `Stats reset for ${formatFriendlyDate(date)}.` : "Site stats reset.";
+  } catch (error) {
+    statusText.textContent = error.message || "Unable to reset site stats.";
+  }
+}
+
+async function loadStats() {
   const token = tokenInput.value.trim();
   if (!token) {
     statusText.textContent = "Enter the private counter token first.";
@@ -46,7 +104,7 @@ form.addEventListener("submit", async (event) => {
     statsContent.hidden = true;
     statusText.textContent = error.message || "Unable to load site counter.";
   }
-});
+}
 
 function renderStats(payload) {
   const daily = Array.isArray(payload.daily) ? payload.daily : [];
@@ -84,6 +142,24 @@ function renderStats(payload) {
   renderSourceRows(referrers);
 
   statsContent.hidden = false;
+}
+
+function buildEmptyStats() {
+  return {
+    totalViews: 0,
+    totalVisits: 0,
+    daily: Array.from({ length: 14 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - index);
+      return {
+        date: date.toISOString().slice(0, 10),
+        views: 0,
+        visits: 0
+      };
+    }),
+    pages: [],
+    referrers: []
+  };
 }
 
 function renderDailyChart(daily) {

@@ -272,6 +272,26 @@ function doPost(e) {
       });
     }
 
+    if (action === "resetSiteStats") {
+      authorizeSiteCounter_(e, payload);
+
+      return jsonResponse_({
+        ok: true,
+        reset: true,
+        stats: handleSiteStatsReset_()
+      });
+    }
+
+    if (action === "resetSiteStatsDay") {
+      authorizeSiteCounter_(e, payload);
+
+      return jsonResponse_({
+        ok: true,
+        reset: true,
+        stats: handleSiteStatsDayReset_(payload)
+      });
+    }
+
     if (action === "upsertMapHome") {
       authorizeCrm_(e, payload);
       ensureHomeMapSheet_();
@@ -1407,6 +1427,54 @@ function handleSiteStats_() {
   };
 }
 
+function handleSiteStatsReset_() {
+  resetSheetToHeader_(ensureSiteCounterSheet_(), ["Date", "Path", "Views", "Visits", "Updated At"]);
+  resetSheetToHeader_(ensureSiteReferrerSheet_(), ["Date", "Referrer", "Views", "Updated At"]);
+
+  return {
+    totalViews: 0,
+    totalVisits: 0,
+    daily: getRecentCounterDays_(14).map((date) => ({ date, views: 0, visits: 0 })),
+    pages: [],
+    referrers: []
+  };
+}
+
+function handleSiteStatsDayReset_(payload) {
+  const date = normalizeCounterResetDate_(payload.date);
+
+  if (!date) {
+    throw new Error("Choose a valid date to reset.");
+  }
+
+  deleteRowsByCounterDate_(ensureSiteCounterSheet_(), date);
+  deleteRowsByCounterDate_(ensureSiteReferrerSheet_(), date);
+  return handleSiteStats_();
+}
+
+function deleteRowsByCounterDate_(sheet, date) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return;
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (formatCounterDate_(values[index][0]) === date) {
+      sheet.deleteRow(index + 2);
+    }
+  }
+}
+
+function resetSheetToHeader_(sheet, headers) {
+  sheet.clearContents();
+  sheet.clearFormats();
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+}
+
 function trackSiteReferrer_(date, value) {
   const sheet = ensureSiteReferrerSheet_();
   const referrer = normalizeCounterReferrer_(value);
@@ -1487,6 +1555,11 @@ function normalizeCounterPath_(value) {
 function normalizeCounterReferrer_(value) {
   const referrer = String(value || "").trim();
   return referrer ? referrer.slice(0, 180) : "Direct";
+}
+
+function normalizeCounterResetDate_(value) {
+  const text = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
 }
 
 function formatCounterDate_(value) {

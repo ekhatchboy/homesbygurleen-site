@@ -61,7 +61,9 @@ async function trackKvView_(counter, body) {
     incrementCounter(counter, "views:total"),
     incrementCounter(counter, `views:date:${today}`),
     incrementCounter(counter, `views:path:${path}`),
-    incrementCounter(counter, `views:referrer:${referrer}`)
+    incrementCounter(counter, `views:referrer:${referrer}`),
+    incrementCounter(counter, `views:pathDate:${today}:${path}`),
+    incrementCounter(counter, `views:referrerDate:${today}:${referrer}`)
   ]);
 
   if (visitId) {
