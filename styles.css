@@ -909,6 +909,27 @@ body::before {
   font-size: 0.95rem;
 }
 
+.site-legal {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 34px 0 0;
+  padding: 18px 0 4px;
+  border-top: 1px solid rgba(77, 50, 32, 0.12);
+  color: rgba(61, 49, 43, 0.68);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.site-legal span:not(:last-child)::after {
+  content: "/";
+  margin-left: 12px;
+  color: rgba(157, 95, 63, 0.45);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
