@@ -100,6 +100,9 @@ This project now expects a Node.js environment for the live AI backend.
 - `LEAD_WEBHOOK_SECRET` for securing the lead webhook
 - `CRM_SHEETS_URL` for Cloudflare CRM read/write access to your Apps Script web app
 - `CRM_API_TOKEN` for securing CRM dashboard actions
+- `SITE_COUNTER_SHEETS_URL` if you want the site counter to use a different Apps Script URL than the CRM
+- `SITE_COUNTER_API_TOKEN` if you want the site counter to use a different Apps Script token than the CRM
+- `SITE_COUNTER_ADMIN_TOKEN` for viewing the private site counter
 
 ## Recommended production setup
 
@@ -129,6 +132,25 @@ If you want the CRM running on Cloudflare Pages instead of Vercel:
 9. Open `/crm.html` on the deployed Cloudflare Pages site.
 
 This keeps the CRM server-side bridge on Cloudflare while Google Sheets remains the database.
+
+## Private site counter
+
+The public pages include a hidden counter script that sends page views to `/api/track-view`. It does not show anything
+to visitors and does not store names, emails, phone numbers, or IP addresses.
+
+For the regular Vercel website, the counter can write into the same Google Apps Script spreadsheet used by the CRM:
+
+1. Update and redeploy `google-apps-script/Code.gs`.
+2. Add `CRM_SHEETS_URL` and `CRM_API_TOKEN` to Vercel, or use `SITE_COUNTER_SHEETS_URL` and `SITE_COUNTER_API_TOKEN`.
+3. Add `SITE_COUNTER_ADMIN_TOKEN` to Vercel with a private value only you know.
+4. Open `/site-stats.html` on the deployed site and enter that token to view totals.
+
+If you want the Cloudflare Pages version to store the counter in Cloudflare KV instead:
+
+1. Create a KV namespace in Cloudflare named `SITE_COUNTER`.
+2. Add a Pages KV binding named `SITE_COUNTER` that points to that namespace.
+3. Add an environment variable named `SITE_COUNTER_ADMIN_TOKEN` with a private value only you know.
+4. Open `/site-stats.html` on the deployed site and enter that token to view totals.
 
 ### Why the separate `cloudflare-crm` folder
 

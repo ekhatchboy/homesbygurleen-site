@@ -868,7 +868,7 @@ function buildTimelineEvents(lead) {
       dateLabel: "Latest note",
       sortValue: Number.MAX_SAFE_INTEGER,
       title: "Notes on file",
-      body: truncateForTimeline(lead["Latest Message / Notes"]),
+      body: lead["Latest Message / Notes"],
       tone: "is-note"
     });
   }
@@ -879,15 +879,6 @@ function buildTimelineEvents(lead) {
 function getTimelineSortValue(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
-}
-
-function truncateForTimeline(value) {
-  const text = String(value || "").trim();
-  if (text.length <= 160) {
-    return text;
-  }
-
-  return `${text.slice(0, 157).trim()}...`;
 }
 
 function buildSmartSummary(lead) {

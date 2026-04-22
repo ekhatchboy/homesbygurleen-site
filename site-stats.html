@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Private Site Counter | Homes By Gurleen</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #2b211d;
+      --muted: #7b6e66;
+      --line: rgba(84, 58, 45, 0.14);
+      --paper: rgba(255, 251, 246, 0.94);
+      --accent: #94513f;
+      --soft: #efe6dc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(196, 158, 102, 0.2), transparent 36rem),
+        linear-gradient(135deg, #fbf7f0, #e7ddd1);
+    }
+
+    main {
+      width: min(960px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: var(--paper);
+      box-shadow: 0 24px 70px rgba(61, 42, 32, 0.12);
+      padding: clamp(24px, 4vw, 44px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      font: 800 0.75rem/1.3 Arial, sans-serif;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      max-width: 680px;
+      margin: 0 0 16px;
+      font-size: clamp(2.4rem, 6vw, 4.8rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      color: var(--muted);
+      font-family: Arial, sans-serif;
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    form {
+      display: flex;
+      gap: 12px;
+      margin: 28px 0;
+      flex-wrap: wrap;
+    }
+
+    input,
+    button {
+      min-height: 48px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font: 700 0.95rem Arial, sans-serif;
+      padding: 0 18px;
+    }
+
+    input {
+      flex: 1 1 260px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .stats-grid,
+    .list-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 22px;
+    }
+
+    .stat,
+    .row {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.56);
+      padding: 18px;
+    }
+
+    .stat span,
+    .row span {
+      display: block;
+      font: 800 0.72rem/1.3 Arial, sans-serif;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      line-height: 1;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      font-family: Arial, sans-serif;
+    }
+
+    .row strong {
+      white-space: nowrap;
+    }
+
+    h2 {
+      margin: 34px 0 14px;
+      font-size: 1.5rem;
+    }
+
+    .status {
+      min-height: 24px;
+      font-weight: 700;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 680px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <p class="eyebrow">Private Counter</p>
+      <h1>Site views, quietly counted.</h1>
+      <p>This page is not linked on the website. Enter your private counter token to see traffic totals.</p>
+
+      <form id="statsForm">
+        <label class="sr-only" for="statsToken">Private token</label>
+        <input id="statsToken" name="token" type="password" placeholder="Private counter token" autocomplete="off">
+        <button type="submit">View Count</button>
+      </form>
+
+      <p class="status" id="statsStatus"></p>
+
+      <div id="statsContent" hidden>
+        <div class="stats-grid">
+          <article class="stat">
+            <span>Total page views</span>
+            <strong id="totalViews">0</strong>
+          </article>
+          <article class="stat">
+            <span>Approx. visits</span>
+            <strong id="totalVisits">0</strong>
+          </article>
+        </div>
+
+        <h2>Last 14 Days</h2>
+        <div class="list-grid" id="dailyStats"></div>
+
+        <h2>Top Pages</h2>
+        <div class="list-grid" id="pageStats"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="site-stats.js" type="module"></script>
+</body>
+</html>

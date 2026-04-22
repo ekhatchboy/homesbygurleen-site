@@ -1,6 +1,7 @@
 const MASTER_SHEET_NAME = "Master Leads";
 const GUIDE_SHEET_NAME = "Follow-Up Guide";
 const HOME_MAP_SHEET_NAME = "Home Map";
+const SITE_COUNTER_SHEET_NAME = "Site Counter";
 const MASTER_HEADER_ROW = [
   "Lead ID",
   "Date",
@@ -249,6 +250,24 @@ function doPost(e) {
       return jsonResponse_({
         ok: true,
         leadId: handleLeadDelete_(payload)
+      });
+    }
+
+    if (action === "trackSiteView") {
+      authorizeCrm_(e, payload);
+
+      return jsonResponse_({
+        ok: true,
+        view: handleSiteViewTrack_(payload)
+      });
+    }
+
+    if (action === "getSiteStats") {
+      authorizeCrm_(e, payload);
+
+      return jsonResponse_({
+        ok: true,
+        ...handleSiteStats_()
       });
     }
 
@@ -1292,6 +1311,117 @@ function handleMapHomeDelete_(payload) {
 
   sheet.deleteRow(existing._rowNumber);
   return propertyId;
+}
+
+function handleSiteViewTrack_(payload) {
+  const sheet = ensureSiteCounterSheet_();
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  const path = normalizeCounterPath_(payload.path);
+  const isNewVisit = payload.isNewVisit === true || String(payload.isNewVisit || "").toLowerCase() === "true";
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    sheet.appendRow([today, path, 1, isNewVisit ? 1 : 0, new Date().toISOString()]);
+    return { date: today, path, views: 1, visits: isNewVisit ? 1 : 0 };
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+  const rowIndex = values.findIndex((row) => formatCounterDate_(row[0]) === today && String(row[1] || "") === path);
+
+  if (rowIndex === -1) {
+    sheet.appendRow([today, path, 1, isNewVisit ? 1 : 0, new Date().toISOString()]);
+    return { date: today, path, views: 1, visits: isNewVisit ? 1 : 0 };
+  }
+
+  const rowNumber = rowIndex + 2;
+  const views = (Number(values[rowIndex][2]) || 0) + 1;
+  const visits = (Number(values[rowIndex][3]) || 0) + (isNewVisit ? 1 : 0);
+
+  sheet.getRange(rowNumber, 3, 1, 3).setValues([[views, visits, new Date().toISOString()]]);
+  return { date: today, path, views, visits };
+}
+
+function handleSiteStats_() {
+  const sheet = ensureSiteCounterSheet_();
+  const lastRow = sheet.getLastRow();
+  const rows = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 5).getValues() : [];
+  const pagesByPath = {};
+  const daysByDate = {};
+  let totalViews = 0;
+  let totalVisits = 0;
+
+  rows.forEach((row) => {
+    const date = formatCounterDate_(row[0]);
+    const path = normalizeCounterPath_(row[1]);
+    const views = Number(row[2]) || 0;
+    const visits = Number(row[3]) || 0;
+
+    if (!date) {
+      return;
+    }
+
+    totalViews += views;
+    totalVisits += visits;
+    pagesByPath[path] = (pagesByPath[path] || 0) + views;
+
+    if (!daysByDate[date]) {
+      daysByDate[date] = { date, views: 0, visits: 0 };
+    }
+
+    daysByDate[date].views += views;
+    daysByDate[date].visits += visits;
+  });
+
+  return {
+    totalViews,
+    totalVisits,
+    daily: getRecentCounterDays_(14).map((date) => daysByDate[date] || { date, views: 0, visits: 0 }),
+    pages: Object.keys(pagesByPath)
+      .map((path) => ({ path, views: pagesByPath[path] }))
+      .sort((firstPage, secondPage) => secondPage.views - firstPage.views)
+  };
+}
+
+function ensureSiteCounterSheet_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(SITE_COUNTER_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SITE_COUNTER_SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Date", "Path", "Views", "Visits", "Updated At"]);
+    sheet.setFrozenRows(1);
+  }
+
+  return sheet;
+}
+
+function normalizeCounterPath_(value) {
+  const path = String(value || "/").trim() || "/";
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return normalized.slice(0, 120);
+}
+
+function formatCounterDate_(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]" && !Number.isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+
+  return String(value || "").trim().slice(0, 10);
+}
+
+function getRecentCounterDays_(count) {
+  const days = [];
+  const date = new Date();
+
+  for (let index = 0; index < count; index += 1) {
+    days.push(Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd"));
+    date.setDate(date.getDate() - 1);
+  }
+
+  return days;
 }
 
 function handleLeadUpdate_(payload) {
