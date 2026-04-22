@@ -32,7 +32,16 @@ resetStatsButton?.addEventListener("click", async () => {
 });
 
 resetDayStatsButton?.addEventListener("click", async () => {
-  await resetStats(resetStatsDate?.value || "");
+  const selectedDate = resetStatsDate?.value || "";
+
+  if (!selectedDate) {
+    window.alert("Please pick a date before resetting one day.");
+    statusText.textContent = "Choose a date before using Reset Day.";
+    resetStatsDate?.focus();
+    return;
+  }
+
+  await resetStats(selectedDate);
 });
 
 async function resetStats(date = "") {
