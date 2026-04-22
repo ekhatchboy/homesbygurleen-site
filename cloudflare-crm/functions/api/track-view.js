@@ -9,13 +9,15 @@ export async function onRequestPost(context) {
   try {
     const body = await request.json();
     const path = normalizePath(body.path);
+    const referrer = normalizeReferrer(body.referrer);
     const visitId = normalizeVisitId(body.visitId);
     const today = new Date().toISOString().slice(0, 10);
 
     await Promise.all([
       incrementCounter(counter, "views:total"),
       incrementCounter(counter, `views:date:${today}`),
-      incrementCounter(counter, `views:path:${path}`)
+      incrementCounter(counter, `views:path:${path}`),
+      incrementCounter(counter, `views:referrer:${referrer}`)
     ]);
 
     if (visitId) {
@@ -52,4 +54,9 @@ function normalizePath(value) {
 
 function normalizeVisitId(value) {
   return String(value || "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80);
+}
+
+function normalizeReferrer(value) {
+  const referrer = String(value || "").trim();
+  return referrer ? referrer.slice(0, 180) : "Direct";
 }

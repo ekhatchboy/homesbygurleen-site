@@ -75,7 +75,8 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .brand-block,
@@ -163,6 +164,7 @@ body::after {
   color: var(--muted);
   font-size: 0.95rem;
   font-weight: 600;
+  padding-left: 4px;
 }
 
 .crm-shell {

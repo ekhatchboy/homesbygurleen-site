@@ -12,6 +12,7 @@ export async function onRequestGet(context) {
 
   const days = getRecentDays(14);
   const pathCounts = await getPathCounts(counter);
+  const referrerCounts = await getReferrerCounts(counter);
 
   return Response.json({
     ok: true,
@@ -22,7 +23,8 @@ export async function onRequestGet(context) {
       views: await getNumber(counter, `views:date:${date}`),
       visits: await getNumber(counter, `visits:date:${date}`)
     }))),
-    pages: pathCounts
+    pages: pathCounts,
+    referrers: referrerCounts
   });
 }
 
@@ -49,6 +51,16 @@ async function getPathCounts(counter) {
   })));
 
   return pages.sort((firstPage, secondPage) => secondPage.views - firstPage.views);
+}
+
+async function getReferrerCounts(counter) {
+  const list = await counter.list({ prefix: "views:referrer:", limit: 50 });
+  const referrers = await Promise.all(list.keys.map(async (item) => ({
+    referrer: item.name.replace("views:referrer:", "") || "Direct",
+    views: await getNumber(counter, item.name)
+  })));
+
+  return referrers.sort((firstReferrer, secondReferrer) => secondReferrer.views - firstReferrer.views);
 }
 
 async function getNumber(counter, key) {

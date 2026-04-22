@@ -2,6 +2,7 @@ const MASTER_SHEET_NAME = "Master Leads";
 const GUIDE_SHEET_NAME = "Follow-Up Guide";
 const HOME_MAP_SHEET_NAME = "Home Map";
 const SITE_COUNTER_SHEET_NAME = "Site Counter";
+const SITE_REFERRER_SHEET_NAME = "Site Referrers";
 const MASTER_HEADER_ROW = [
   "Lead ID",
   "Date",
@@ -1342,6 +1343,7 @@ function handleSiteViewTrack_(payload) {
 
   if (lastRow < 2) {
     sheet.appendRow([today, path, 1, isNewVisit ? 1 : 0, new Date().toISOString()]);
+    trackSiteReferrer_(today, payload.referrer);
     return { date: today, path, views: 1, visits: isNewVisit ? 1 : 0 };
   }
 
@@ -1350,6 +1352,7 @@ function handleSiteViewTrack_(payload) {
 
   if (rowIndex === -1) {
     sheet.appendRow([today, path, 1, isNewVisit ? 1 : 0, new Date().toISOString()]);
+    trackSiteReferrer_(today, payload.referrer);
     return { date: today, path, views: 1, visits: isNewVisit ? 1 : 0 };
   }
 
@@ -1358,6 +1361,7 @@ function handleSiteViewTrack_(payload) {
   const visits = (Number(values[rowIndex][3]) || 0) + (isNewVisit ? 1 : 0);
 
   sheet.getRange(rowNumber, 3, 1, 3).setValues([[views, visits, new Date().toISOString()]]);
+  trackSiteReferrer_(today, payload.referrer);
   return { date: today, path, views, visits };
 }
 
@@ -1398,8 +1402,48 @@ function handleSiteStats_() {
     daily: getRecentCounterDays_(14).map((date) => daysByDate[date] || { date, views: 0, visits: 0 }),
     pages: Object.keys(pagesByPath)
       .map((path) => ({ path, views: pagesByPath[path] }))
-      .sort((firstPage, secondPage) => secondPage.views - firstPage.views)
+      .sort((firstPage, secondPage) => secondPage.views - firstPage.views),
+    referrers: getSiteReferrerStats_()
   };
+}
+
+function trackSiteReferrer_(date, value) {
+  const sheet = ensureSiteReferrerSheet_();
+  const referrer = normalizeCounterReferrer_(value);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    sheet.appendRow([date, referrer, 1, new Date().toISOString()]);
+    return;
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+  const rowIndex = values.findIndex((row) => formatCounterDate_(row[0]) === date && String(row[1] || "") === referrer);
+
+  if (rowIndex === -1) {
+    sheet.appendRow([date, referrer, 1, new Date().toISOString()]);
+    return;
+  }
+
+  const rowNumber = rowIndex + 2;
+  const views = (Number(values[rowIndex][2]) || 0) + 1;
+  sheet.getRange(rowNumber, 3, 1, 2).setValues([[views, new Date().toISOString()]]);
+}
+
+function getSiteReferrerStats_() {
+  const sheet = ensureSiteReferrerSheet_();
+  const lastRow = sheet.getLastRow();
+  const rows = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 4).getValues() : [];
+  const referrersBySource = {};
+
+  rows.forEach((row) => {
+    const referrer = normalizeCounterReferrer_(row[1]);
+    referrersBySource[referrer] = (referrersBySource[referrer] || 0) + (Number(row[2]) || 0);
+  });
+
+  return Object.keys(referrersBySource)
+    .map((referrer) => ({ referrer, views: referrersBySource[referrer] }))
+    .sort((firstReferrer, secondReferrer) => secondReferrer.views - firstReferrer.views);
 }
 
 function ensureSiteCounterSheet_() {
@@ -1418,10 +1462,31 @@ function ensureSiteCounterSheet_() {
   return sheet;
 }
 
+function ensureSiteReferrerSheet_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(SITE_REFERRER_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SITE_REFERRER_SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Date", "Referrer", "Views", "Updated At"]);
+    sheet.setFrozenRows(1);
+  }
+
+  return sheet;
+}
+
 function normalizeCounterPath_(value) {
   const path = String(value || "/").trim() || "/";
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return normalized.slice(0, 120);
+}
+
+function normalizeCounterReferrer_(value) {
+  const referrer = String(value || "").trim();
+  return referrer ? referrer.slice(0, 180) : "Direct";
 }
 
 function formatCounterDate_(value) {
