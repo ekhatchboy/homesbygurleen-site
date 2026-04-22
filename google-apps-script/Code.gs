@@ -254,7 +254,7 @@ function doPost(e) {
     }
 
     if (action === "trackSiteView") {
-      authorizeCrm_(e, payload);
+      authorizeSiteCounter_(e, payload);
 
       return jsonResponse_({
         ok: true,
@@ -263,7 +263,7 @@ function doPost(e) {
     }
 
     if (action === "getSiteStats") {
-      authorizeCrm_(e, payload);
+      authorizeSiteCounter_(e, payload);
 
       return jsonResponse_({
         ok: true,
@@ -1185,6 +1185,26 @@ function authorizeCrm_(e, payload) {
   ).trim();
 
   if (!expected || expected !== provided) {
+    throw new Error("Unauthorized");
+  }
+}
+
+function authorizeSiteCounter_(e, payload) {
+  const expectedTokens = [
+    PropertiesService.getScriptProperties().getProperty("SITE_COUNTER_API_TOKEN"),
+    PropertiesService.getScriptProperties().getProperty("CRM_API_TOKEN"),
+    PropertiesService.getScriptProperties().getProperty("WEBHOOK_SECRET")
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  const provided = String(
+    (payload && (payload.crmToken || payload.webhookSecret)) ||
+    getRequestParameter_(e, "crmToken") ||
+    getRequestParameter_(e, "webhookSecret") ||
+    getHeaderValue_(e, "x-crm-token") ||
+    getHeaderValue_(e, "x-webhook-secret") ||
+    ""
+  ).trim();
+
+  if (!expectedTokens.length || !expectedTokens.includes(provided)) {
     throw new Error("Unauthorized");
   }
 }

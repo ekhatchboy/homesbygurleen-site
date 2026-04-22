@@ -1,6 +1,6 @@
 const config = {
-  sheetsUrl: process.env.SITE_COUNTER_SHEETS_URL || process.env.CRM_SHEETS_URL || "",
-  apiToken: process.env.SITE_COUNTER_API_TOKEN || process.env.CRM_API_TOKEN || "",
+  sheetsUrl: process.env.SITE_COUNTER_SHEETS_URL || process.env.CRM_SHEETS_URL || process.env.LEAD_WEBHOOK_URL || "",
+  apiToken: process.env.SITE_COUNTER_API_TOKEN || process.env.CRM_API_TOKEN || process.env.LEAD_WEBHOOK_SECRET || "",
   adminToken: process.env.SITE_COUNTER_ADMIN_TOKEN || ""
 };
 
@@ -26,7 +26,8 @@ export default async function handler(request, response) {
       },
       body: JSON.stringify({
         action: "getSiteStats",
-        crmToken: config.apiToken
+        crmToken: config.apiToken,
+        webhookSecret: config.apiToken
       })
     });
 
