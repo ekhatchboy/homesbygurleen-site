@@ -59,10 +59,13 @@
               </div>
             </div>
             <form id="propertyForm" class="map-form">
-              <label>
-                <span>Property address</span>
-                <input id="propertyAddress" name="address" type="text" placeholder="742 Newton Court, Merced, CA" required>
-              </label>
+              <div class="map-address-field">
+                <label>
+                  <span>Property address</span>
+                  <input id="propertyAddress" name="address" type="text" placeholder="742 Newton Court, Merced, CA" required autocomplete="off">
+                </label>
+                <div class="map-suggestions map-suggestions-dropdown" id="mapSuggestions" hidden></div>
+              </div>
               <div class="map-address-actions">
                 <button type="button" class="map-button map-button-secondary" id="searchPropertyButton">Search on Map</button>
               </div>
@@ -91,7 +94,6 @@
               </div>
             </form>
             <p class="map-inline-note" id="mapStatusText">Search Livingston addresses and save the ones you want to keep tracking.</p>
-            <div class="map-suggestions" id="mapSuggestions" hidden></div>
           </section>
 
           <section class="map-card">
