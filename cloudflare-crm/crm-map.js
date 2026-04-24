@@ -15,11 +15,14 @@ const state = {
   buildingFetchToken: 0,
   suppressMapClickUntil: 0,
   buildingReloadTimer: null,
-  lastBuildingFetchKey: ""
+  lastBuildingFetchKey: "",
+  addressSuggestTimer: null,
+  addressSuggestToken: 0
 };
 
 const elements = {
   propertyForm: document.querySelector("#propertyForm"),
+  propertyAddress: document.querySelector("#propertyAddress"),
   propertySubmitButton: document.querySelector("#propertySubmitButton"),
   searchPropertyButton: document.querySelector("#searchPropertyButton"),
   propertyList: document.querySelector("#propertyList"),
@@ -38,6 +41,8 @@ function initialize() {
   initializeMap();
   loadProperties();
   elements.propertyForm?.addEventListener("submit", handlePropertySubmit);
+  elements.propertyAddress?.addEventListener("keydown", handlePropertyAddressKeydown);
+  elements.propertyAddress?.addEventListener("input", handlePropertyAddressInput);
   elements.searchPropertyButton?.addEventListener("click", handlePropertySearch);
   document.querySelectorAll("[data-map-filter]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -564,6 +569,62 @@ function readableStatus(status) {
     return "Upcoming";
   }
 
+function handlePropertyAddressKeydown(event) {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+  void handlePropertySearch();
+}
+
+function handlePropertyAddressInput(event) {
+  const query = String(event?.target?.value || "").trim();
+
+  if (state.addressSuggestTimer) {
+    window.clearTimeout(state.addressSuggestTimer);
+  }
+
+  state.addressSuggestToken += 1;
+
+  if (query.length < 4) {
+    renderAddressSuggestions([]);
+    return;
+  }
+
+  const requestToken = state.addressSuggestToken;
+  state.addressSuggestTimer = window.setTimeout(() => {
+    void loadLiveAddressSuggestions_(query, requestToken);
+  }, 320);
+}
+
+async function loadLiveAddressSuggestions_(query, requestToken) {
+  const currentQuery = String(elements.propertyAddress?.value || "").trim();
+  if (!currentQuery || currentQuery !== query || requestToken !== state.addressSuggestToken) {
+    return;
+  }
+
+  try {
+    const suggestions = await getAddressSuggestions(query, 5);
+    if (requestToken !== state.addressSuggestToken) {
+      return;
+    }
+
+    const refreshedQuery = String(elements.propertyAddress?.value || "").trim();
+    if (refreshedQuery !== query) {
+      return;
+    }
+
+    renderAddressSuggestions(suggestions, {
+      copy: suggestions.length ? "Suggested addresses as you type" : ""
+    });
+  } catch {
+    if (requestToken === state.addressSuggestToken) {
+      renderAddressSuggestions([]);
+    }
+  }
+}
+
 async function handlePropertySubmit(event) {
   event.preventDefault();
   const formData = new FormData(elements.propertyForm);
@@ -654,7 +715,7 @@ async function handlePropertySearch() {
     const suggestions = await getAddressSuggestions(address);
     if (suggestions.length) {
       elements.mapStatusText.textContent = "I couldn't place that exact address, but I found a few likely matches below.";
-      renderAddressSuggestions(suggestions);
+      renderAddressSuggestions(suggestions, { copy: "Did you mean one of these?" });
     } else {
       elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
     }
@@ -769,12 +830,13 @@ async function getAddressSuggestions(address, limit = 5) {
   return candidates.slice(0, limit);
 }
 
-function renderAddressSuggestions(suggestions) {
+function renderAddressSuggestions(suggestions, options = {}) {
   if (!elements.mapSuggestions) {
     return;
   }
 
   const items = Array.isArray(suggestions) ? suggestions.slice(0, 5) : [];
+  const copy = String(options.copy || "Did you mean one of these?").trim();
   if (!items.length) {
     elements.mapSuggestions.hidden = true;
     elements.mapSuggestions.innerHTML = "";
@@ -783,7 +845,7 @@ function renderAddressSuggestions(suggestions) {
 
   elements.mapSuggestions.hidden = false;
   elements.mapSuggestions.innerHTML = `
-    <p class="map-suggestion-copy">Did you mean one of these?</p>
+    <p class="map-suggestion-copy">${escapeHtml(copy)}</p>
     ${items.map((item, index) => `
       <button
         type="button"
