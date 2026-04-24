@@ -587,7 +587,7 @@ function handlePropertyAddressInput(event) {
 
   state.addressSuggestToken += 1;
 
-  if (query.length < 4) {
+  if (query.length < 3) {
     renderAddressSuggestions([]);
     return;
   }
@@ -595,7 +595,7 @@ function handlePropertyAddressInput(event) {
   const requestToken = state.addressSuggestToken;
   state.addressSuggestTimer = window.setTimeout(() => {
     void loadLiveAddressSuggestions_(query, requestToken);
-  }, 320);
+  }, 120);
 }
 
 async function loadLiveAddressSuggestions_(query, requestToken) {
@@ -605,7 +605,7 @@ async function loadLiveAddressSuggestions_(query, requestToken) {
   }
 
   try {
-    const suggestions = await getAddressSuggestions(query, 5);
+    const suggestions = await getLiveAddressSuggestions_(query, 5);
     if (requestToken !== state.addressSuggestToken) {
       return;
     }
@@ -843,7 +843,25 @@ async function getAddressSuggestions(address, limit = 5) {
   return candidates.slice(0, limit);
 }
 
-async function fetchArcGisAddressSuggestions_(query, limit) {
+async function getLiveAddressSuggestions_(query, limit = 5) {
+  const baseQuery = String(query || "").trim();
+  if (!baseQuery) {
+    return [];
+  }
+
+  try {
+    const quickSuggestions = await fetchArcGisAddressSuggestions_(baseQuery, Math.max(limit, 5), false);
+    if (quickSuggestions.length) {
+      return quickSuggestions.slice(0, limit);
+    }
+  } catch {
+    // Fall back to the regular resolved search path.
+  }
+
+  return getAddressSuggestions(baseQuery, limit);
+}
+
+async function fetchArcGisAddressSuggestions_(query, limit, resolveLocations = true) {
   const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?f=pjson&maxSuggestions=${Math.max(limit, 5)}&countryCode=USA&category=Address&searchExtent=-124.48,32.45,-114.13,42.05&text=${encodeURIComponent(query)}`, {
     headers: { "Accept": "application/json" }
   });
@@ -855,6 +873,18 @@ async function fetchArcGisAddressSuggestions_(query, limit) {
   const payload = await response.json();
   const suggestions = Array.isArray(payload?.suggestions) ? payload.suggestions : [];
   const resolved = [];
+
+  if (!resolveLocations) {
+    return suggestions
+      .filter((suggestion) => suggestion && !suggestion.isCollection && suggestion.magicKey)
+      .slice(0, limit)
+      .map((suggestion) => ({
+        label: String(suggestion.text || "").trim(),
+        magicKey: String(suggestion.magicKey || "").trim(),
+        provider: "arcgis"
+      }))
+      .filter((suggestion) => suggestion.label && suggestion.magicKey);
+  }
 
   for (const suggestion of suggestions) {
     if (resolved.length >= limit) {
@@ -945,10 +975,6 @@ function renderAddressSuggestions(suggestions, options = {}) {
 
 async function applyAddressSuggestion(suggestion) {
   const chosen = suggestion || {};
-  if (!Number.isFinite(Number(chosen.lat)) || !Number.isFinite(Number(chosen.lng))) {
-    return;
-  }
-
   const chosenAddress = String(chosen.label || "").trim();
   if (chosenAddress) {
     document.querySelector("#propertyAddress").value = chosenAddress;
@@ -958,11 +984,24 @@ async function applyAddressSuggestion(suggestion) {
   elements.mapStatusText.textContent = "Opening that suggested address on the map.";
 
   try {
-    state.map.setView([Number(chosen.lat), Number(chosen.lng)], 17, { animate: true });
+    let lat = Number(chosen.lat);
+    let lng = Number(chosen.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      const resolved = await resolveSuggestedAddress_(chosen);
+      lat = Number(resolved?.lat);
+      lng = Number(resolved?.lng);
+    }
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new Error("I couldn't place that suggested address on the map yet.");
+    }
+
+    state.map.setView([lat, lng], 17, { animate: true });
     await waitForMapIdle_();
     await showPreviewMarker(
-      { lat: Number(chosen.lat), lng: Number(chosen.lng) },
-      chosenAddress || await reverseGeocodeLatLng(Number(chosen.lat), Number(chosen.lng)).catch(() => chosenAddress)
+      { lat, lng },
+      chosenAddress || await reverseGeocodeLatLng(lat, lng).catch(() => chosenAddress)
     );
     renderAddressSuggestions([]);
     elements.mapStatusText.textContent = "Suggested address loaded. Choose a color and save it on the map.";
@@ -971,6 +1010,25 @@ async function applyAddressSuggestion(suggestion) {
   } finally {
     syncSearchButton(false);
   }
+}
+
+async function resolveSuggestedAddress_(suggestion) {
+  const chosen = suggestion || {};
+  const label = String(chosen.label || "").trim();
+  const magicKey = String(chosen.magicKey || "").trim();
+
+  if (magicKey) {
+    const resolved = await resolveArcGisSuggestion_(label, magicKey);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  if (label) {
+    return geocodeAddress(label);
+  }
+
+  return null;
 }
 
 async function reverseGeocodeLatLng(lat, lng) {
