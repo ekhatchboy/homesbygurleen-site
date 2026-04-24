@@ -766,6 +766,19 @@ async function getAddressSuggestions(address, limit = 5) {
     });
   };
 
+  try {
+    const arcGisSuggestions = await fetchArcGisAddressSuggestions_(baseQuery, Math.max(limit, 5));
+    arcGisSuggestions.forEach((entry) => {
+      addCandidate(entry.label, entry.lat, entry.lng);
+    });
+
+    if (candidates.length >= limit) {
+      return candidates.slice(0, limit);
+    }
+  } catch {
+    // Fall through to the other geocoders.
+  }
+
   const nominatimQueries = [
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=${Math.max(limit, 5)}&addressdetails=1&viewbox=-124.48,42.05,-114.13,32.45&bounded=1&q=${encodeURIComponent(californiaQuery)}`,
     `https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=us&limit=${Math.max(limit, 5)}&addressdetails=1&state=California&q=${encodeURIComponent(californiaQuery)}`,
@@ -828,6 +841,69 @@ async function getAddressSuggestions(address, limit = 5) {
   }
 
   return candidates.slice(0, limit);
+}
+
+async function fetchArcGisAddressSuggestions_(query, limit) {
+  const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?f=pjson&maxSuggestions=${Math.max(limit, 5)}&countryCode=USA&category=Address&searchExtent=-124.48,32.45,-114.13,42.05&text=${encodeURIComponent(query)}`, {
+    headers: { "Accept": "application/json" }
+  });
+
+  if (!response.ok) {
+    throw new Error("ArcGIS suggest failed.");
+  }
+
+  const payload = await response.json();
+  const suggestions = Array.isArray(payload?.suggestions) ? payload.suggestions : [];
+  const resolved = [];
+
+  for (const suggestion of suggestions) {
+    if (resolved.length >= limit) {
+      break;
+    }
+
+    if (!suggestion || suggestion.isCollection || !suggestion.magicKey) {
+      continue;
+    }
+
+    const match = await resolveArcGisSuggestion_(String(suggestion.text || "").trim(), String(suggestion.magicKey || "").trim());
+    if (!match) {
+      continue;
+    }
+
+    resolved.push(match);
+  }
+
+  return resolved;
+}
+
+async function resolveArcGisSuggestion_(text, magicKey) {
+  if (!text || !magicKey) {
+    return null;
+  }
+
+  const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=pjson&outFields=Match_addr,Addr_type&maxLocations=1&countryCode=USA&searchExtent=-124.48,32.45,-114.13,42.05&location=-119.75,37.25&singleLine=${encodeURIComponent(text)}&magicKey=${encodeURIComponent(magicKey)}`, {
+    headers: { "Accept": "application/json" }
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = await response.json();
+  const candidate = Array.isArray(payload?.candidates) ? payload.candidates[0] : null;
+  if (!candidate) {
+    return null;
+  }
+
+  const label = String(candidate.address || candidate.attributes?.Match_addr || text).trim();
+  const lat = Number(candidate.location?.y);
+  const lng = Number(candidate.location?.x);
+
+  if (!label || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return { label, lat, lng };
 }
 
 function renderAddressSuggestions(suggestions, options = {}) {
