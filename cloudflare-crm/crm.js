@@ -8,6 +8,27 @@
   selectedPipelineLeadIds: new Set()
 };
 
+const BIRTH_MONTH_OPTIONS = [
+  "",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+
+const BIRTH_DAY_OPTIONS = [
+  "",
+  ...Array.from({ length: 31 }, (_, index) => String(index + 1))
+];
+
 const elements = {
   leadList: document.querySelector("#leadList"),
   detailCard: document.querySelector("#detailCard"),
@@ -245,6 +266,8 @@ function renderSelectedLead() {
       ${renderDetailItem("Location", lead["Area"] || "Not provided")}
       ${renderDetailItem("Timeline", lead["Timeline"] || "Not provided")}
       ${renderDetailItem("Budget", lead["Budget"] ? formatBudgetValue(lead["Budget"]) : "Not provided")}
+      ${renderDetailItem("Birthday", formatBirthdayValue(lead))}
+      ${renderDetailItem("Anniversary", lead["Anniversary"] ? formatLongDate(lead["Anniversary"]) : "Not provided")}
     </div>
 
     <section class="crm-timeline-panel">
@@ -294,6 +317,9 @@ function renderSelectedLead() {
       ${renderSelect("Seller Contract Signed", ["", "Yes", "No"], lead["Seller Contract Signed"] || "")}
       ${renderInput("Seller Contract Signed Date", lead["Seller Contract Signed Date"], "date")}
       ${renderInput("Seller Contract Expiration Date", lead["Seller Contract Expiration Date"], "date")}
+      ${renderSelect("Birth Month", BIRTH_MONTH_OPTIONS, lead["Birth Month"] || "")}
+      ${renderSelect("Birth Day", BIRTH_DAY_OPTIONS, String(lead["Birth Day"] || ""))}
+      ${renderInput("Anniversary", lead["Anniversary"], "date")}
       ${renderInput("Last Contact Date", lead["Last Contact Date"], "date")}
       ${renderInput("Next Follow-Up Date", lead["Next Follow-Up Date"], "date")}
       ${renderSelect("Follow-Up Rank", ["Rank A", "Rank B", "Rank C", "Touchpoint"], lead["Follow-Up Rank"] || "Rank A")}
@@ -1016,6 +1042,21 @@ function formatBudgetValue(value) {
     currency: "USD",
     maximumFractionDigits: 0
   });
+}
+
+function formatBirthdayValue(lead) {
+  const month = String(lead?.["Birth Month"] || "").trim();
+  const day = String(lead?.["Birth Day"] || "").trim();
+
+  if (month && day) {
+    return `${month} ${day}`;
+  }
+
+  if (month || day) {
+    return month || day;
+  }
+
+  return "Not provided";
 }
 
 function normalizeBudgetForSave(value) {

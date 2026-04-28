@@ -34,7 +34,10 @@ const MASTER_HEADER_ROW = [
   "Buyer Contract Expiration Date",
   "Seller Contract Signed",
   "Seller Contract Signed Date",
-  "Seller Contract Expiration Date"
+  "Seller Contract Expiration Date",
+  "Birth Month",
+  "Birth Day",
+  "Anniversary"
 ];
 const HOME_MAP_HEADER_ROW = [
   "Property ID",
@@ -515,7 +518,7 @@ function formatMasterLeadSheet_(sheet) {
   const opportunityRange = sheet.getRange(1, 8, 1, 5);
   const businessRange = sheet.getRange(1, 13, 1, 4);
   const transcriptRange = sheet.getRange(1, 17, 1, 1);
-  const workflowRange = sheet.getRange(1, 18, 1, 7);
+  const workflowRange = sheet.getRange(1, 18, 1, 14);
 
   leadInfoRange.setBackground("#efe2cf");
   opportunityRange.setBackground("#f4eadc");
@@ -1626,7 +1629,10 @@ function handleLeadUpdate_(payload) {
     "Buyer Contract Expiration Date",
     "Seller Contract Signed",
     "Seller Contract Signed Date",
-    "Seller Contract Expiration Date"
+    "Seller Contract Expiration Date",
+    "Birth Month",
+    "Birth Day",
+    "Anniversary"
   ];
 
   const rowRange = sheet.getRange(rowNumber, 1, 1, MASTER_HEADER_ROW.length);
@@ -1753,6 +1759,9 @@ function handleLeadCreate_(payload) {
   const sellerContractSigned = String(payload["Seller Contract Signed"] || "").trim();
   const sellerContractSignedDate = normalizeIncomingDate_(payload["Seller Contract Signed Date"]);
   const sellerContractExpirationDate = normalizeIncomingDate_(payload["Seller Contract Expiration Date"]);
+  const birthMonth = String(payload["Birth Month"] || "").trim();
+  const birthDay = String(payload["Birth Day"] || "").trim();
+  const anniversary = normalizeIncomingDate_(payload["Anniversary"]);
   const source = String(payload["Source"] || "Manual CRM Entry").trim();
 
   const row = MASTER_HEADER_ROW.map((header) => {
@@ -1819,6 +1828,12 @@ function handleLeadCreate_(payload) {
         return sellerContractSignedDate;
       case "Seller Contract Expiration Date":
         return sellerContractExpirationDate;
+      case "Birth Month":
+        return birthMonth;
+      case "Birth Day":
+        return birthDay;
+      case "Anniversary":
+        return anniversary;
       default:
         return "";
     }
@@ -1916,6 +1931,7 @@ function jsonResponse_(data, statusCode) {
 
 function applyDropdowns_(sheet) {
   const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
+  const headers = sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).getValues()[0];
 
   const leadTypeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
@@ -1952,14 +1968,26 @@ function applyDropdowns_(sheet) {
     .setAllowInvalid(false)
     .build();
 
-  sheet.getRange(2, 3, maxRows, 1).setDataValidation(leadTypeRule);
-  sheet.getRange(2, 18, maxRows, 1).setDataValidation(consentRule);
-  sheet.getRange(2, 19, maxRows, 1).setDataValidation(statusRule);
-  sheet.getRange(2, 22, maxRows, 1).setDataValidation(rankRule);
-  sheet.getRange(2, 23, maxRows, 1).setDataValidation(textStatusRule);
-  sheet.getRange(2, 24, maxRows, 1).setDataValidation(lendingRule);
-  sheet.getRange(2, 26, maxRows, 1).setDataValidation(contractRule);
-  sheet.getRange(2, 29, maxRows, 1).setDataValidation(contractRule);
+  const birthMonthRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const birthDayRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(buildBirthDayOptions_(), true)
+    .setAllowInvalid(false)
+    .build();
+
+  setColumnValidationByHeader_(sheet, headers, "Lead Type", 2, maxRows, leadTypeRule);
+  setColumnValidationByHeader_(sheet, headers, "Consent to Text", 2, maxRows, consentRule);
+  setColumnValidationByHeader_(sheet, headers, "Lead Status", 2, maxRows, statusRule);
+  setColumnValidationByHeader_(sheet, headers, "Follow-Up Rank", 2, maxRows, rankRule);
+  setColumnValidationByHeader_(sheet, headers, "Text Status", 2, maxRows, textStatusRule);
+  setColumnValidationByHeader_(sheet, headers, "Lending", 2, maxRows, lendingRule);
+  setColumnValidationByHeader_(sheet, headers, "Buyer Contract Signed", 2, maxRows, contractRule);
+  setColumnValidationByHeader_(sheet, headers, "Seller Contract Signed", 2, maxRows, contractRule);
+  setColumnValidationByHeader_(sheet, headers, "Birth Month", 2, maxRows, birthMonthRule);
+  setColumnValidationByHeader_(sheet, headers, "Birth Day", 2, maxRows, birthDayRule);
 }
 
 function applyLeadRowValidations_(sheet, rowNumber) {
@@ -1967,6 +1995,8 @@ function applyLeadRowValidations_(sheet, rowNumber) {
     return;
   }
 
+  const headers = sheet.getRange(1, 1, 1, MASTER_HEADER_ROW.length).getValues()[0];
+
   const leadTypeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["Buyer", "Seller", "Buyer + Seller", "Contact", "Referral", "Investor"], true)
     .setAllowInvalid(false)
@@ -2002,14 +2032,54 @@ function applyLeadRowValidations_(sheet, rowNumber) {
     .setAllowInvalid(false)
     .build();
 
-  sheet.getRange(rowNumber, 3).setDataValidation(leadTypeRule);
-  sheet.getRange(rowNumber, 18).setDataValidation(consentRule);
-  sheet.getRange(rowNumber, 19).setDataValidation(statusRule);
-  sheet.getRange(rowNumber, 22).setDataValidation(rankRule);
-  sheet.getRange(rowNumber, 23).setDataValidation(textStatusRule);
-  sheet.getRange(rowNumber, 24).setDataValidation(lendingRule);
-  sheet.getRange(rowNumber, 26).setDataValidation(contractRule);
-  sheet.getRange(rowNumber, 29).setDataValidation(contractRule);
+  const birthMonthRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const birthDayRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(buildBirthDayOptions_(), true)
+    .setAllowInvalid(false)
+    .build();
+
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Lead Type", leadTypeRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Consent to Text", consentRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Lead Status", statusRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Follow-Up Rank", rankRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Text Status", textStatusRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Lending", lendingRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Buyer Contract Signed", contractRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Seller Contract Signed", contractRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Birth Month", birthMonthRule);
+  setCellValidationByHeader_(sheet, headers, rowNumber, "Birth Day", birthDayRule);
+}
+
+function setColumnValidationByHeader_(sheet, headers, headerName, startRow, rowCount, rule) {
+  const column = headers.indexOf(headerName) + 1;
+  if (!column) {
+    return;
+  }
+
+  sheet.getRange(startRow, column, rowCount, 1).setDataValidation(rule);
+}
+
+function setCellValidationByHeader_(sheet, headers, rowNumber, headerName, rule) {
+  const column = headers.indexOf(headerName) + 1;
+  if (!column) {
+    return;
+  }
+
+  sheet.getRange(rowNumber, column).setDataValidation(rule);
+}
+
+function buildBirthDayOptions_() {
+  const days = [""];
+
+  for (var day = 1; day <= 31; day += 1) {
+    days.push(String(day));
+  }
+
+  return days;
 }
 
 function getLeadRecordByRow_(sheet, rowNumber, headers) {
