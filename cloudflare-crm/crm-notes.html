@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homes By Gurleen CRM Notes</title>
+  <meta name="description" content="Private Homes By Gurleen CRM change notes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="crm.css">
+</head>
+<body>
+  <div class="page-shell crm-notes-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <p class="eyebrow">Private Notes</p>
+        <div class="brand-lockup">
+          <img src="hbg-logo-transparent-black.png" alt="HBG Homes By Gurleen logo" class="brand-logo">
+          <div class="brand-text">CRM Change Notes</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <a class="button button-secondary" href="crm.html">Back to CRM</a>
+        <button type="button" class="button button-primary" id="refreshActivityButton">Refresh Notes</button>
+      </div>
+    </header>
+
+    <main class="crm-notes-page">
+      <section class="crm-notes-heading">
+        <p class="hero-kicker">Recent CRM changes</p>
+        <h1>What changed lately.</h1>
+      </section>
+
+      <section class="crm-notes-paper" id="crmActivityList">
+        <div class="crm-empty-state">Loading recent CRM notes.</div>
+      </section>
+    </main>
+  </div>
+
+  <script src="crm-notes.js" type="module"></script>
+</body>
+</html>

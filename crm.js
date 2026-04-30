@@ -1,7 +1,6 @@
 ﻿const state = {
   leads: [],
   filteredLeads: [],
-  activity: [],
   selectedLeadId: "",
   isSaving: false,
   quickView: "all",
@@ -39,8 +38,6 @@ const elements = {
   leadStatusFilter: document.querySelector("#leadStatusFilter"),
   quickViews: document.querySelector("#quickViews"),
   refreshButton: document.querySelector("#refreshLeadsButton"),
-  refreshActivityButton: document.querySelector("#refreshActivityButton"),
-  activityList: document.querySelector("#crmActivityList"),
   statusText: document.querySelector("#crmStatusText"),
   metricTotal: document.querySelector("#metricTotal"),
   metricNew: document.querySelector("#metricNew"),
@@ -73,7 +70,6 @@ function initialize() {
     });
   });
   elements.refreshButton?.addEventListener("click", loadLeads);
-  elements.refreshActivityButton?.addEventListener("click", loadCrmActivity);
   elements.toggleBulkPipelineButton?.addEventListener("click", toggleBulkPipelineMode);
   elements.bulkFollowUpButton?.addEventListener("click", updateSelectedPipelineFollowUps);
   elements.openLeadModalButton?.addEventListener("click", openLeadModal);
@@ -94,7 +90,6 @@ function initialize() {
   });
   prefillCreateLeadForm();
   loadLeads();
-  loadCrmActivity();
 }
 
 async function loadLeads() {
@@ -119,28 +114,6 @@ async function loadLeads() {
     elements.leadList.innerHTML = `<div class="crm-empty-state">${escapeHtml(error.message || "Unable to load CRM leads.")}</div>`;
     elements.detailCard.innerHTML = `<div class="crm-empty-state crm-detail-empty">${escapeHtml(error.message || "Unable to load CRM leads.")}</div>`;
     updateMetrics([]);
-  }
-}
-
-async function loadCrmActivity() {
-  if (!elements.activityList) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`/crm/activity?ts=${Date.now()}`, {
-      cache: "no-store"
-    });
-    const payload = await response.json();
-
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "Unable to load CRM activity.");
-    }
-
-    state.activity = Array.isArray(payload.changes) ? payload.changes : [];
-    renderCrmActivity();
-  } catch (error) {
-    elements.activityList.innerHTML = `<div class="crm-empty-state">${escapeHtml(error.message || "Unable to load CRM activity.")}</div>`;
   }
 }
 
@@ -244,38 +217,6 @@ function renderLeadList() {
       renderSelectedLead();
     });
   });
-}
-
-function renderCrmActivity() {
-  if (!elements.activityList) {
-    return;
-  }
-
-  if (!state.activity.length) {
-    elements.activityList.innerHTML = `<div class="crm-empty-state">No CRM changes have been logged yet.</div>`;
-    return;
-  }
-
-  elements.activityList.innerHTML = state.activity.slice(0, 10).map((change) => {
-    const action = String(change["Action"] || "Updated").trim();
-    const leadName = String(change["Lead Name"] || change["Lead ID"] || "Lead").trim();
-    const field = String(change["Field"] || "").trim();
-    const oldValue = String(change["Old Value"] || "").trim();
-    const newValue = String(change["New Value"] || "").trim();
-    const timestamp = formatActivityTimestamp(change["Timestamp"]);
-    const summary = buildActivitySummary(action, field, oldValue, newValue);
-
-    return `
-      <article class="crm-activity-item">
-        <div class="crm-activity-main">
-          <span>${escapeHtml(timestamp)}</span>
-          <strong>${escapeHtml(leadName)}</strong>
-          <p>${escapeHtml(summary)}</p>
-        </div>
-        <span class="crm-pill">${escapeHtml(action)}</span>
-      </article>
-    `;
-  }).join("");
 }
 
 function renderSelectedLead() {
@@ -590,7 +531,6 @@ async function updateSelectedPipelineFollowUps() {
     state.isBulkPipelineMode = false;
     applyFilters();
     scheduleQuietLeadRefresh();
-    loadCrmActivity();
     elements.statusText.textContent = `Updated ${updates.length} follow-up dates.`;
   } catch (error) {
     elements.statusText.textContent = error.message || "Unable to update selected follow-ups.";
@@ -638,7 +578,6 @@ async function saveLead(leadId, formData) {
     if (result.lead && result.lead["Lead ID"]) {
       upsertLeadInState(result.lead);
       applyFilters();
-      loadCrmActivity();
       scheduleQuietLeadRefresh();
     } else {
       await loadLeads();
@@ -698,7 +637,6 @@ async function handleCreateLeadSubmit(event) {
       upsertLeadInState(result.lead);
       closeLeadModal({ reset: true });
       applyFilters();
-      loadCrmActivity();
       elements.statusText.textContent = "Lead added successfully.";
       scheduleQuietLeadRefresh();
     } else {
@@ -858,45 +796,6 @@ function formatLongDate(value) {
     day: "numeric",
     year: "numeric"
   });
-}
-
-function formatActivityTimestamp(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Recently";
-  }
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-}
-
-function buildActivitySummary(action, field, oldValue, newValue) {
-  if (action === "Created") {
-    return "Lead was added to the CRM.";
-  }
-
-  if (action === "Deleted") {
-    return "Lead was deleted from the CRM.";
-  }
-
-  if (!field) {
-    return "Lead was updated.";
-  }
-
-  if (oldValue && newValue) {
-    return `${field} changed from ${oldValue} to ${newValue}.`;
-  }
-
-  if (newValue) {
-    return `${field} set to ${newValue}.`;
-  }
-
-  return `${field} was cleared.`;
 }
 
 function renderPill(text, className = "") {
@@ -1276,7 +1175,6 @@ async function saveLeadPatch(payload) {
     if (result.lead && result.lead["Lead ID"]) {
       upsertLeadInState(result.lead);
       applyFilters();
-      loadCrmActivity();
       scheduleQuietLeadRefresh();
     } else {
       await loadLeads();
@@ -1332,7 +1230,6 @@ async function deleteLead(lead) {
     }
 
     elements.statusText.textContent = "Lead deleted.";
-    loadCrmActivity();
   } catch (error) {
     state.leads = previousLeads;
     state.filteredLeads = previousFilteredLeads;
