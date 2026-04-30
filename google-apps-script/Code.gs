@@ -3,6 +3,7 @@ const GUIDE_SHEET_NAME = "Follow-Up Guide";
 const HOME_MAP_SHEET_NAME = "Home Map";
 const SITE_COUNTER_SHEET_NAME = "Site Counter";
 const SITE_REFERRER_SHEET_NAME = "Site Referrers";
+const CRM_CHANGE_LOG_SHEET_NAME = "CRM Change Log";
 const MASTER_HEADER_ROW = [
   "Lead ID",
   "Date",
@@ -53,11 +54,22 @@ const HOME_MAP_HEADER_ROW = [
   "Show In List",
   "Updated At"
 ];
+const CRM_CHANGE_LOG_HEADER_ROW = [
+  "Timestamp",
+  "Action",
+  "Lead ID",
+  "Lead Name",
+  "Field",
+  "Old Value",
+  "New Value",
+  "Note"
+];
 
 function setupSheets() {
   const masterSheet = getMasterLeadSheet_();
   ensureGuideSheet_();
   ensureHomeMapSheet_();
+  ensureCrmChangeLogSheet_();
   formatMasterLeadSheet_(masterSheet);
 }
 
@@ -201,6 +213,16 @@ function doGet(e) {
       return jsonResponse_({
         ok: true,
         homes: getHomeMapRecords_()
+      });
+    }
+
+    if (mode === "crmActivity") {
+      authorizeCrm_(e);
+      ensureCrmChangeLogSheet_();
+
+      return jsonResponse_({
+        ok: true,
+        changes: getRecentCrmChangeRecords_(Number(e.parameter.limit || 25))
       });
     }
 
@@ -497,6 +519,34 @@ function ensureMasterHeaders_(sheet) {
   if (!headersAreCurrent) {
     headerRange.setValues([MASTER_HEADER_ROW]);
   }
+}
+
+function ensureCrmChangeLogSheet_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(CRM_CHANGE_LOG_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(CRM_CHANGE_LOG_SHEET_NAME);
+  }
+
+  if (sheet.getMaxColumns() < CRM_CHANGE_LOG_HEADER_ROW.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), CRM_CHANGE_LOG_HEADER_ROW.length - sheet.getMaxColumns());
+  }
+
+  const headerRange = sheet.getRange(1, 1, 1, CRM_CHANGE_LOG_HEADER_ROW.length);
+  const headers = headerRange.getValues()[0].map((value) => String(value || ""));
+  const headersAreCurrent = CRM_CHANGE_LOG_HEADER_ROW.every((header, index) => headers[index] === header);
+
+  if (!headersAreCurrent) {
+    headerRange.setValues([CRM_CHANGE_LOG_HEADER_ROW]);
+  }
+
+  headerRange
+    .setFontWeight("bold")
+    .setBackground("#efe2cf")
+    .setFontColor("#241b18");
+  sheet.setFrozenRows(1);
+  return sheet;
 }
 
 function formatMasterLeadSheet_(sheet) {
@@ -1637,6 +1687,7 @@ function handleLeadUpdate_(payload) {
 
   const rowRange = sheet.getRange(rowNumber, 1, 1, MASTER_HEADER_ROW.length);
   const rowValues = rowRange.getValues()[0];
+  const changes = [];
   let didChange = false;
 
   writableFields.forEach((field) => {
@@ -1650,6 +1701,14 @@ function handleLeadUpdate_(payload) {
         if (field === "Lead Type") {
           nextValue = normalizeLeadType_(nextValue);
         }
+        const previousValue = rowValues[column - 1];
+        if (normalizeChangeValue_(previousValue) !== normalizeChangeValue_(nextValue)) {
+          changes.push({
+            field,
+            oldValue: previousValue,
+            newValue: nextValue
+          });
+        }
         rowValues[column - 1] = nextValue;
         didChange = true;
       }
@@ -1660,7 +1719,12 @@ function handleLeadUpdate_(payload) {
     rowRange.setValues([rowValues]);
   }
 
-  return getLeadRecordByRow_(sheet, rowNumber, headers);
+  const updatedRecord = getLeadRecordByRow_(sheet, rowNumber, headers);
+  if (changes.length) {
+    appendCrmChangeLogEntries_("Updated", updatedRecord, changes, "Lead details saved from CRM.");
+  }
+
+  return updatedRecord;
 }
 
 function handleBulkFollowUpUpdate_(payload) {
@@ -1687,6 +1751,7 @@ function handleBulkFollowUpUpdate_(payload) {
 
   const idValues = sheet.getRange(2, leadIdColumn, dataRowCount, 1).getValues();
   const followUpValues = sheet.getRange(2, nextFollowUpColumn, dataRowCount, 1).getValues();
+  const leadRows = sheet.getRange(2, 1, dataRowCount, MASTER_HEADER_ROW.length).getValues();
   const rowsByLeadId = {};
 
   idValues.forEach((row, index) => {
@@ -1699,6 +1764,7 @@ function handleBulkFollowUpUpdate_(payload) {
 
   const updatedRowNumbers = [];
   const updatedLeads = [];
+  const changeEntries = [];
 
   updates.forEach((update) => {
     const leadId = String(update && update.leadId ? update.leadId : "").trim();
@@ -1714,8 +1780,19 @@ function handleBulkFollowUpUpdate_(payload) {
       return;
     }
 
-    followUpValues[rowIndex][0] = nextFollowUpDate;
-    updatedRowNumbers.push(rowIndex + 2);
+    const oldValue = followUpValues[rowIndex][0];
+    if (normalizeChangeValue_(oldValue) !== normalizeChangeValue_(nextFollowUpDate)) {
+      followUpValues[rowIndex][0] = nextFollowUpDate;
+      updatedRowNumbers.push(rowIndex + 2);
+      changeEntries.push({
+        lead: recordFromRowValues_(headers, leadRows[rowIndex]),
+        changes: [{
+          field: "Next Follow-Up Date",
+          oldValue,
+          newValue: nextFollowUpDate
+        }]
+      });
+    }
   });
 
   if (!updatedRowNumbers.length) {
@@ -1726,6 +1803,10 @@ function handleBulkFollowUpUpdate_(payload) {
 
   updatedRowNumbers.forEach((rowNumber) => {
     updatedLeads.push(getLeadRecordByRow_(sheet, rowNumber, headers));
+  });
+
+  changeEntries.forEach((entry) => {
+    appendCrmChangeLogEntries_("Bulk Follow-Up", entry.lead, entry.changes, "Follow-up date updated from pipeline bulk action.");
   });
 
   return updatedLeads;
@@ -1842,7 +1923,13 @@ function handleLeadCreate_(payload) {
   sheet.appendRow(row);
   const rowNumber = sheet.getLastRow();
   applyLeadRowValidations_(sheet, rowNumber);
-  return getLeadRecordByRow_(sheet, rowNumber, headers);
+  const lead = getLeadRecordByRow_(sheet, rowNumber, headers);
+  appendCrmChangeLogEntries_("Created", lead, [{
+    field: "Lead",
+    oldValue: "",
+    newValue: lead["Lead Status"] || "New"
+  }], "Lead added from CRM.");
+  return lead;
 }
 
 function handleLeadDelete_(payload) {
@@ -1871,8 +1958,79 @@ function handleLeadDelete_(payload) {
     throw new Error("Lead not found");
   }
 
+  const lead = getLeadRecordByRow_(sheet, rowNumber, headers);
+  appendCrmChangeLogEntries_("Deleted", lead, [{
+    field: "Lead",
+    oldValue: lead["Lead Status"] || "",
+    newValue: ""
+  }], "Lead deleted from CRM.");
   sheet.deleteRow(rowNumber);
   return leadId;
+}
+
+function appendCrmChangeLogEntries_(action, lead, changes, note) {
+  const entries = Array.isArray(changes) ? changes : [];
+  if (!entries.length) {
+    return;
+  }
+
+  const sheet = ensureCrmChangeLogSheet_();
+  const timestamp = new Date();
+  const leadId = String(lead && lead["Lead ID"] || "").trim();
+  const leadName = String(lead && (lead["Name"] || lead["Email"] || lead["Phone"]) || "").trim();
+  const rows = entries.map((change) => [
+    timestamp,
+    action,
+    leadId,
+    leadName,
+    change.field || "",
+    normalizeChangeValue_(change.oldValue),
+    normalizeChangeValue_(change.newValue),
+    note || ""
+  ]);
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, CRM_CHANGE_LOG_HEADER_ROW.length).setValues(rows);
+}
+
+function getRecentCrmChangeRecords_(limit) {
+  const sheet = ensureCrmChangeLogSheet_();
+  const maxRecords = Math.min(Math.max(Number(limit) || 25, 1), 100);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return [];
+  }
+
+  const rowCount = Math.min(lastRow - 1, maxRecords);
+  const startRow = Math.max(lastRow - rowCount + 1, 2);
+  const values = sheet.getRange(startRow, 1, rowCount, CRM_CHANGE_LOG_HEADER_ROW.length).getValues();
+
+  return values
+    .map((row) => {
+      const record = {};
+      CRM_CHANGE_LOG_HEADER_ROW.forEach((header, index) => {
+        const value = row[index];
+        record[header] = value instanceof Date ? value.toISOString() : value;
+      });
+      return record;
+    })
+    .reverse();
+}
+
+function recordFromRowValues_(headers, rowValues) {
+  const record = {};
+  headers.forEach((header, index) => {
+    record[header] = rowValues[index] || "";
+  });
+  return record;
+}
+
+function normalizeChangeValue_(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+
+  return String(value || "").trim();
 }
 
 function findLeadRowById_(sheet, leadIdColumn, leadId) {

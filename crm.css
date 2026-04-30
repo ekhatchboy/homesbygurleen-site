@@ -304,6 +304,56 @@ body::after {
   font-size: 2rem;
 }
 
+.crm-activity-card {
+  display: grid;
+  gap: 18px;
+}
+
+.crm-activity-list {
+  display: grid;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.crm-activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(64, 38, 26, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.crm-activity-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.crm-activity-main span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.crm-activity-main strong {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.35rem;
+  line-height: 1.05;
+}
+
+.crm-activity-main p {
+  margin: 0;
+  color: #5b4f49;
+  line-height: 1.45;
+}
+
 .crm-workspace {
   grid-template-columns: minmax(340px, 0.78fr) minmax(0, 1.62fr);
   align-items: start;
