@@ -35,26 +35,62 @@ function renderCrmActivity(changes) {
     return;
   }
 
-  elements.activityList.innerHTML = changes.map((change) => {
-    const action = String(change["Action"] || "Updated").trim();
-    const leadName = String(change["Lead Name"] || change["Lead ID"] || "Lead").trim();
-    const field = String(change["Field"] || "").trim();
-    const oldValue = String(change["Old Value"] || "").trim();
-    const newValue = String(change["New Value"] || "").trim();
-    const timestamp = formatActivityTimestamp(change["Timestamp"]);
-    const summary = buildActivitySummary(action, field, oldValue, newValue);
+  elements.activityList.innerHTML = groupChangesByLead(changes).map((group) => {
+    const latestChange = group.changes[0] || {};
+    const timestamp = formatActivityTimestamp(latestChange["Timestamp"]);
+    const actionLabel = group.changes.length === 1
+      ? String(latestChange["Action"] || "Updated").trim()
+      : `${group.changes.length} updates`;
 
     return `
       <article class="crm-note-entry">
         <div class="crm-note-date">${escapeHtml(timestamp)}</div>
         <div>
-          <strong>${escapeHtml(leadName)}</strong>
-          <p>${escapeHtml(summary)}</p>
+          <strong>${escapeHtml(group.leadName)}</strong>
+          <div class="crm-note-lines">
+            ${group.changes.map(renderGroupedChange).join("")}
+          </div>
         </div>
-        <span>${escapeHtml(action)}</span>
+        <span>${escapeHtml(actionLabel)}</span>
       </article>
     `;
   }).join("");
+}
+
+function groupChangesByLead(changes) {
+  const groupsByKey = new Map();
+
+  changes.forEach((change) => {
+    const leadId = String(change["Lead ID"] || "").trim();
+    const leadName = String(change["Lead Name"] || leadId || "Lead").trim();
+    const key = leadId || leadName.toLowerCase();
+
+    if (!groupsByKey.has(key)) {
+      groupsByKey.set(key, {
+        leadName,
+        changes: []
+      });
+    }
+
+    groupsByKey.get(key).changes.push(change);
+  });
+
+  return Array.from(groupsByKey.values());
+}
+
+function renderGroupedChange(change) {
+  const action = String(change["Action"] || "Updated").trim();
+  const field = String(change["Field"] || "").trim();
+  const oldValue = String(change["Old Value"] || "").trim();
+  const newValue = String(change["New Value"] || "").trim();
+  const summary = buildActivitySummary(action, field, oldValue, newValue);
+
+  return `
+    <p>
+      <span class="crm-note-line-time">${escapeHtml(formatActivityTimestamp(change["Timestamp"]))}</span>
+      ${escapeHtml(summary)}
+    </p>
+  `;
 }
 
 function formatActivityTimestamp(value) {

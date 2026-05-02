@@ -414,6 +414,21 @@ body::after {
   line-height: 1.55;
 }
 
+.crm-note-lines {
+  display: grid;
+  gap: 7px;
+}
+
+.crm-note-line-time {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .crm-note-entry span,
 .crm-note-date {
   color: var(--muted);
