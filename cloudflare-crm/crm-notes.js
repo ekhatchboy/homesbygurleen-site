@@ -104,11 +104,33 @@ function renderGroupedChangesByTimestamp(changes) {
 function renderGroupedChange(change) {
   const action = String(change["Action"] || "Updated").trim();
   const field = String(change["Field"] || "").trim();
-  const oldValue = String(change["Old Value"] || "").trim();
-  const newValue = String(change["New Value"] || "").trim();
+  const oldValue = formatChangeValue(field, change["Old Value"]);
+  const newValue = formatChangeValue(field, change["New Value"]);
   const summary = buildActivitySummary(action, field, oldValue, newValue);
 
   return `<p>${escapeHtml(summary)}</p>`;
+}
+
+function formatChangeValue(field, value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  if (!/date|anniversary/i.test(field)) {
+    return text;
+  }
+
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) {
+    return text;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
 }
 
 function formatActivityTimestamp(value) {
