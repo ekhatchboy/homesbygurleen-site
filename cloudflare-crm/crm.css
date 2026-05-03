@@ -416,17 +416,27 @@ body::after {
 
 .crm-note-lines {
   display: grid;
-  gap: 7px;
+  gap: 12px;
 }
 
 .crm-note-line-time {
-  display: inline-block;
-  margin-right: 8px;
+  display: block;
+  margin: 0 0 4px;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.crm-note-time-group {
+  display: grid;
+  gap: 4px;
+}
+
+.crm-note-time-lines {
+  display: grid;
+  gap: 5px;
 }
 
 .crm-note-entry span,

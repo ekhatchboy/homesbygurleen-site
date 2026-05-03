@@ -48,7 +48,7 @@ function renderCrmActivity(changes) {
         <div>
           <strong>${escapeHtml(group.leadName)}</strong>
           <div class="crm-note-lines">
-            ${group.changes.map(renderGroupedChange).join("")}
+            ${renderGroupedChangesByTimestamp(group.changes)}
           </div>
         </div>
         <span>${escapeHtml(actionLabel)}</span>
@@ -78,6 +78,29 @@ function groupChangesByLead(changes) {
   return Array.from(groupsByKey.values());
 }
 
+function renderGroupedChangesByTimestamp(changes) {
+  const groupsByTime = new Map();
+
+  changes.forEach((change) => {
+    const timestamp = formatActivityTimestamp(change["Timestamp"]);
+
+    if (!groupsByTime.has(timestamp)) {
+      groupsByTime.set(timestamp, []);
+    }
+
+    groupsByTime.get(timestamp).push(change);
+  });
+
+  return Array.from(groupsByTime.entries()).map(([timestamp, timestampChanges]) => `
+    <div class="crm-note-time-group">
+      <div class="crm-note-line-time">${escapeHtml(timestamp)}</div>
+      <div class="crm-note-time-lines">
+        ${timestampChanges.map(renderGroupedChange).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
 function renderGroupedChange(change) {
   const action = String(change["Action"] || "Updated").trim();
   const field = String(change["Field"] || "").trim();
@@ -85,12 +108,7 @@ function renderGroupedChange(change) {
   const newValue = String(change["New Value"] || "").trim();
   const summary = buildActivitySummary(action, field, oldValue, newValue);
 
-  return `
-    <p>
-      <span class="crm-note-line-time">${escapeHtml(formatActivityTimestamp(change["Timestamp"]))}</span>
-      ${escapeHtml(summary)}
-    </p>
-  `;
+  return `<p>${escapeHtml(summary)}</p>`;
 }
 
 function formatActivityTimestamp(value) {
