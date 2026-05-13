@@ -426,6 +426,13 @@ async function handleBuildingClick(latLngs, polygon) {
     return;
   }
 
+  const existingProperty = await findSavedPropertyForBuilding_(polygon, centroid);
+  if (existingProperty) {
+    await openSavedPropertyFromMap_(existingProperty, polygon);
+    elements.mapStatusText.textContent = "Saved property opened.";
+    return;
+  }
+
   elements.mapStatusText.textContent = "Looking up that house so you can color it on the map.";
 
   try {
@@ -1187,6 +1194,12 @@ async function showPreviewMarker(location, address, preferredBuilding) {
     return false;
   }
 
+  const existingProperty = await findSavedPropertyForBuilding_(matchedBuilding, location);
+  if (existingProperty) {
+    await openSavedPropertyFromMap_(existingProperty, matchedBuilding);
+    return true;
+  }
+
   state.selectedBuildingLayer = matchedBuilding;
   state.previewProperty = {
       address,
@@ -1544,6 +1557,60 @@ function isBuildingMatch(layer, entry) {
   }
 
   return isLocationMatch(layer.__centroid, entry);
+}
+
+async function findSavedPropertyForBuilding_(layer, location) {
+  const localMatch = findSavedPropertyForBuildingInList_(state.properties, layer, location);
+  if (localMatch) {
+    return localMatch;
+  }
+
+  const freshProperties = await loadPropertiesFromSheet_();
+  if (!freshProperties?.length) {
+    return null;
+  }
+
+  state.properties = freshProperties;
+  saveProperties();
+  return findSavedPropertyForBuildingInList_(state.properties, layer, location);
+}
+
+function findSavedPropertyForBuildingInList_(properties, layer, location) {
+  return properties.find((entry) => {
+    if (isBuildingMatch(layer, entry)) {
+      return true;
+    }
+
+    return isLocationMatch(location, entry);
+  }) || null;
+}
+
+async function openSavedPropertyFromMap_(property, layer) {
+  if (!property?.id) {
+    return;
+  }
+
+  state.selectedBuildingLayer = layer || state.selectedBuildingLayer;
+  state.previewProperty = null;
+  state.selectedId = property.id;
+
+  try {
+    const freshProperties = await loadPropertiesFromSheet_();
+    const freshProperty = freshProperties?.find((entry) => entry.id === property.id);
+    if (freshProperty) {
+      const index = state.properties.findIndex((entry) => entry.id === property.id);
+      if (index >= 0) {
+        state.properties[index] = freshProperty;
+      }
+      state.selectedId = freshProperty.id;
+    }
+  } catch {
+    // The local copy is still enough to open the detail card.
+  }
+
+  state.map?.closePopup();
+  render();
+  refreshBuildingStyles();
 }
 
 function findNearestBuildingLayer(lat, lng) {
