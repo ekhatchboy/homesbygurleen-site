@@ -452,7 +452,7 @@ async function handleBuildingClick(latLngs, polygon) {
     return;
   }
 
-  const existingProperty = await findSavedPropertyForBuilding_(polygon, centroid);
+  const existingProperty = polygon.__savedProperty || await findSavedPropertyForBuilding_(polygon, centroid);
   if (existingProperty) {
     state.selectedPropertySnapshot = existingProperty;
     await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: false, latlng: centroid });
@@ -1585,6 +1585,7 @@ function refreshBuildingStyles() {
 
     const previewMatch = Boolean(state.previewProperty && layer === state.selectedBuildingLayer);
     const propertyMatch = state.properties.find((entry) => isBuildingMatch(layer, entry));
+    layer.__savedProperty = propertyMatch || null;
     const activeStatus = previewMatch ? state.previewProperty?.status : propertyMatch?.status;
     const isSelected = layer === state.selectedBuildingLayer || Boolean(propertyMatch && propertyMatch.id === state.selectedId);
     layer.setStyle(getBuildingStyle(activeStatus, isSelected));
