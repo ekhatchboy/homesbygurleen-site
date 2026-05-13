@@ -1234,7 +1234,7 @@ async function savePreviewProperty() {
     return;
   }
 
-  syncVisiblePreviewNote_();
+  syncVisiblePreviewInputs_();
 
   if (state.previewPopup && state.map) {
     state.map.closePopup(state.previewPopup);
@@ -1248,7 +1248,7 @@ async function savePreviewProperty() {
       return;
   }
 
-  let savedPropertyId = "";
+  let savedProperty = null;
 
   try {
     const existing = findMatchingPropertyForPreview_();
@@ -1267,9 +1267,9 @@ async function savePreviewProperty() {
       }
       const savedExisting = await savePropertyToSheet_(existing);
       Object.assign(existing, savedExisting);
-      savedPropertyId = existing.id;
+      savedProperty = existing;
     } else {
-      const savedProperty = await savePropertyToSheet_({
+      savedProperty = await savePropertyToSheet_({
         id: crypto.randomUUID(),
         address: preview.address,
         leadName: "",
@@ -1283,10 +1283,14 @@ async function savePreviewProperty() {
         showInList: false
       });
       state.properties.unshift(savedProperty);
-      savedPropertyId = savedProperty.id;
     }
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to save house color right now.";
+    return;
+  }
+
+  if (!savedProperty?.id) {
+    elements.mapStatusText.textContent = "House color saved, but I could not reopen its detail card yet.";
     return;
   }
 
@@ -1295,19 +1299,28 @@ async function savePreviewProperty() {
     state.map?.closePopup();
   }
   clearPreviewMarker();
-  state.selectedId = savedPropertyId;
+  state.selectedId = savedProperty.id;
   render();
   refreshBuildingStyles();
   elements.mapStatusText.textContent = "House color saved on the map.";
 }
 
-function syncVisiblePreviewNote_() {
+function syncVisiblePreviewInputs_() {
   if (!state.previewProperty) {
     return;
   }
 
   const visibleNote = document.querySelector("[data-preview-notes]");
   const sidebarNote = document.querySelector("#propertyNotes");
+  const activeStatusButton = document.querySelector("[data-preview-status].is-active, [data-popup-preview-status].is-active");
+
+  if (activeStatusButton) {
+    state.previewProperty.status =
+      activeStatusButton.getAttribute("data-preview-status") ||
+      activeStatusButton.getAttribute("data-popup-preview-status") ||
+      state.previewProperty.status;
+  }
+
   if (visibleNote && String(visibleNote.value || "").trim()) {
     state.previewProperty.notes = visibleNote.value || "";
     return;
