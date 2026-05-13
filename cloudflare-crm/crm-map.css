@@ -212,9 +212,14 @@ body {
   border-radius: 999px;
 }
 
-.is-upcoming { background: #fff2cc; color: #6b5a1f; }
-.is-visited { background: #d9ead3; color: #355a33; }
-.is-under-contract { background: #f4cccc; color: #7a2d2d; }
+.is-upcoming,
+.map-status-pill.upcoming { background: #eee6da; color: #5f544b; }
+.is-visited,
+.map-status-pill.visited { background: #d9ead3; color: #355a33; }
+.is-under-contract,
+.map-status-pill.under-contract { background: #fff2cc; color: #6b5a1f; }
+.is-do-not-go,
+.map-status-pill.do-not-go { background: #f4cccc; color: #7a2d2d; }
 
 .property-map {
   width: 100%;
@@ -251,6 +256,34 @@ body {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 18px;
+}
+.map-preview-notes {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.map-preview-notes span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.map-preview-notes textarea {
+  width: 100%;
+  min-height: 118px;
+  padding: 14px 16px;
+  border: 1px solid rgba(64, 38, 26, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.55;
+  resize: vertical;
+}
+.map-preview-notes textarea:focus {
+  outline: 2px solid rgba(205, 168, 83, 0.34);
+  border-color: rgba(205, 168, 83, 0.46);
 }
 .map-status-button {
   min-height: 40px;
@@ -347,19 +380,33 @@ body {
 }
 
 .property-marker-house.is-upcoming .property-marker-roof,
-.property-marker-house.is-upcoming .property-marker-body {
-  background: #cda853;
-  border-bottom-color: #cda853;
+.property-marker-house.is-upcoming .property-marker-body,
+.property-marker-house.upcoming .property-marker-roof,
+.property-marker-house.upcoming .property-marker-body {
+  background: #998372;
+  border-bottom-color: #998372;
 }
 
 .property-marker-house.is-visited .property-marker-roof,
-.property-marker-house.is-visited .property-marker-body {
+.property-marker-house.is-visited .property-marker-body,
+.property-marker-house.visited .property-marker-roof,
+.property-marker-house.visited .property-marker-body {
   background: #66935f;
   border-bottom-color: #66935f;
 }
 
 .property-marker-house.is-under-contract .property-marker-roof,
-.property-marker-house.is-under-contract .property-marker-body {
+.property-marker-house.is-under-contract .property-marker-body,
+.property-marker-house.under-contract .property-marker-roof,
+.property-marker-house.under-contract .property-marker-body {
+  background: #cda853;
+  border-bottom-color: #cda853;
+}
+
+.property-marker-house.is-do-not-go .property-marker-roof,
+.property-marker-house.is-do-not-go .property-marker-body,
+.property-marker-house.do-not-go .property-marker-roof,
+.property-marker-house.do-not-go .property-marker-body {
   background: #be5656;
   border-bottom-color: #be5656;
 }
@@ -435,9 +482,10 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(71, 42, 27, 0.12);
 }
-.board-house.is-upcoming { background: rgba(205, 168, 83, 0.78); color: #5f4e1f; }
+.board-house.is-upcoming { background: rgba(153, 131, 114, 0.58); color: #4f4138; }
 .board-house.is-visited { background: rgba(102, 147, 95, 0.78); color: #244123; }
-.board-house.is-under-contract { background: rgba(190, 86, 86, 0.82); color: #5d1f1f; }
+.board-house.is-under-contract { background: rgba(205, 168, 83, 0.78); color: #5f4e1f; }
+.board-house.is-do-not-go { background: rgba(190, 86, 86, 0.82); color: #5d1f1f; }
 .board-house.is-preview { outline: 2px dashed rgba(138, 75, 58, 0.48); outline-offset: 2px; }
 .board-house-number {
   display: inline-flex;

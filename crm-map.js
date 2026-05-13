@@ -479,10 +479,14 @@ function renderPropertyDetail() {
         </div>
         <p class="map-detail-copy">Choose the color/status you want, then save it directly onto the map.</p>
         <div class="map-preview-actions">
-          <button type="button" class="map-status-button${preview.status === "upcoming" ? " is-active" : ""}" data-preview-status="upcoming">Upcoming</button>
-          <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-preview-status="visited">Visited</button>
-          <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-preview-status="under-contract">Under Contract</button>
+          <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-preview-status="under-contract">Gold: Under Contract</button>
+          <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-preview-status="visited">Green: Visited</button>
+          <button type="button" class="map-status-button${preview.status === "do-not-go" ? " is-active" : ""}" data-preview-status="do-not-go">Red: Do Not Go</button>
         </div>
+        <label class="map-preview-notes">
+          <span>Notes</span>
+          <textarea data-preview-notes placeholder="Anything to remember about this house.">${escapeHtml(preview.notes || "")}</textarea>
+        </label>
         <div class="map-detail-actions">
           <button type="button" class="map-button map-button-primary" data-save-preview>Save House to Map</button>
           <button type="button" class="map-button map-button-secondary" data-load-preview>Load into form</button>
@@ -493,6 +497,11 @@ function renderPropertyDetail() {
         button.addEventListener("click", () => {
           setPreviewStatus(button.getAttribute("data-preview-status") || "upcoming");
         });
+      });
+      elements.propertyDetailCard.querySelector("[data-preview-notes]")?.addEventListener("input", (event) => {
+        if (state.previewProperty) {
+          state.previewProperty.notes = event.target.value || "";
+        }
       });
       elements.propertyDetailCard.querySelector("[data-save-preview]")?.addEventListener("click", () => {
         void savePreviewProperty();
@@ -566,6 +575,7 @@ function readableStatus(status) {
     if (!status) return "Not Set";
     if (status === "visited") return "Visited";
     if (status === "under-contract") return "Under Contract";
+    if (status === "do-not-go") return "Do Not Go There";
     return "Upcoming";
   }
 
@@ -1106,8 +1116,8 @@ function togglePropertyVisitStatus(propertyId) {
   const property = state.properties.find((entry) => entry.id === propertyId);
   if (!property) return;
 
-  if (property.status === "under-contract") {
-    elements.mapStatusText.textContent = "Under-contract homes stay red. Change that from the form if needed.";
+  if (property.status === "under-contract" || property.status === "do-not-go") {
+    elements.mapStatusText.textContent = `${readableStatus(property.status)} homes should be changed from the form if needed.`;
     return;
   }
 
@@ -1146,6 +1156,7 @@ async function showPreviewMarker(location, address, preferredBuilding) {
       lat: Number(location.lat),
       lng: Number(location.lng),
       status: "",
+      notes: "",
       buildingKey: matchedBuilding?.__buildingKey || "",
       shapePoints: matchedBuilding ? serializeShapePoints_(matchedBuilding) : ""
     };
@@ -1207,6 +1218,7 @@ async function savePreviewProperty() {
       existing.lng = preview.lng;
       existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
       existing.shapePoints = preview.shapePoints || existing.shapePoints || "";
+      existing.notes = String(preview.notes || "").trim() || existing.notes || "";
       existing.showInList = false;
       if (preview.status === "visited" && !existing.visitDate) {
         existing.visitDate = new Date().toISOString().slice(0, 10);
@@ -1220,7 +1232,7 @@ async function savePreviewProperty() {
         leadName: "",
         status: preview.status,
         visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
-        notes: "",
+        notes: String(preview.notes || "").trim(),
         lat: preview.lat,
         lng: preview.lng,
         buildingKey: preview.buildingKey || "",
@@ -1254,7 +1266,7 @@ function loadPreviewIntoForm() {
   elements.propertyForm.leadName.value = "";
   elements.propertyForm.status.value = state.previewProperty.status || "upcoming";
   elements.propertyForm.visitDate.value = state.previewProperty.status === "visited" ? new Date().toISOString().slice(0, 10) : "";
-  elements.propertyForm.notes.value = "";
+  elements.propertyForm.notes.value = state.previewProperty.notes || "";
   delete elements.propertyForm.dataset.editId;
   syncSubmitButton(false, "Add property");
   elements.mapStatusText.textContent = "Preview house loaded into the form.";
@@ -1277,9 +1289,9 @@ function openPreviewPopup() {
     <div class="map-preview-popup">
       <strong>${escapeHtml(preview.address)}</strong>
         <div class="map-preview-actions">
-          <button type="button" class="map-status-button${preview.status === "upcoming" ? " is-active" : ""}" data-popup-preview-status="upcoming">Gold</button>
-          <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-popup-preview-status="visited">Green</button>
-          <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-popup-preview-status="under-contract">Red</button>
+          <button type="button" class="map-status-button${preview.status === "under-contract" ? " is-active" : ""}" data-popup-preview-status="under-contract">Gold: Under Contract</button>
+          <button type="button" class="map-status-button${preview.status === "visited" ? " is-active" : ""}" data-popup-preview-status="visited">Green: Visited</button>
+          <button type="button" class="map-status-button${preview.status === "do-not-go" ? " is-active" : ""}" data-popup-preview-status="do-not-go">Red: Do Not Go</button>
           <button type="button" class="map-status-button" data-popup-clear-preview>Clear</button>
         </div>
       <button type="button" class="map-button map-button-primary map-popup-save" data-popup-save-preview>Save on Map</button>
@@ -1361,14 +1373,18 @@ function refreshBuildingStyles() {
 function getBuildingStyle(status, isSelected) {
   const palette = {
     upcoming: {
-      color: "rgba(205, 168, 83, 0.96)",
-      fillColor: "rgba(205, 168, 83, 0.72)"
+      color: "rgba(153, 131, 114, 0.8)",
+      fillColor: "rgba(153, 131, 114, 0.38)"
     },
     visited: {
       color: "rgba(102, 147, 95, 0.96)",
       fillColor: "rgba(102, 147, 95, 0.72)"
     },
     "under-contract": {
+      color: "rgba(205, 168, 83, 0.96)",
+      fillColor: "rgba(205, 168, 83, 0.72)"
+    },
+    "do-not-go": {
       color: "rgba(190, 86, 86, 0.98)",
       fillColor: "rgba(190, 86, 86, 0.74)"
     }
