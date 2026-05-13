@@ -212,7 +212,7 @@ function renderPropertyList() {
       <p class="map-property-subtitle">${escapeHtml(property.leadName || "No lead linked yet")}</p>
       <div class="map-property-meta">
         ${renderStatusPill(property.status)}
-        ${property.visitDate ? `<span class="map-status-pill">${escapeHtml(formatDate(property.visitDate))}</span>` : ""}
+        ${formatDate(property.visitDate) ? `<span class="map-status-pill">${escapeHtml(formatDate(property.visitDate))}</span>` : ""}
       </div>
     </div>
   `).join("");
@@ -537,6 +537,7 @@ async function handleMapClickPreview(event) {
     return;
   }
 
+  state.selectedPropertySnapshot = null;
   const savedProperty = findSavedPropertyAtLatLngInList_(state.properties, event.latlng);
   if (savedProperty) {
     state.suppressMapClickUntil = Date.now() + 500;
@@ -685,7 +686,7 @@ function renderPropertyDetail() {
       </div>
       <div class="map-detail-field">
         <span>Visit Date</span>
-        <strong>${property.visitDate ? escapeHtml(formatDate(property.visitDate)) : "Not set"}</strong>
+        <strong>${formatDate(property.visitDate) || "Not set"}</strong>
       </div>
     </div>
     ${renderSavedStatusControls_(property)}
@@ -1412,6 +1413,7 @@ async function showPreviewMarker(location, address, preferredBuilding) {
     };
   document.querySelector("#propertyAddress").value = address;
   state.selectedId = "";
+  state.selectedPropertySnapshot = null;
   renderPropertyDetail();
   refreshBuildingStyles();
   openPreviewPopup();
@@ -2199,7 +2201,20 @@ function syncSearchButton(isBusy) {
 }
 
 function formatDate(value) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00`));
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T00:00:00`)
+    : new Date(raw);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
 function escapeHtml(value) {
