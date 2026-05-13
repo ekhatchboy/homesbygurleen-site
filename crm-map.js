@@ -66,7 +66,6 @@ function initializeMap() {
   state.savedShapeLayer = L.layerGroup().addTo(state.map);
   state.map.on("moveend zoomend", scheduleBuildingReload_);
   state.map.on("click", handleMapClickPreview);
-  state.map.getContainer()?.addEventListener("click", handleMapContainerClick_, true);
   scheduleBuildingReload_(0);
 }
 
@@ -494,6 +493,16 @@ async function handleMapClickPreview(event) {
     return;
   }
 
+  if (state.hoveredSavedProperty) {
+    const property = state.hoveredSavedProperty;
+    const latlng = state.hoveredSavedLatLng || event.latlng;
+    state.suppressMapClickUntil = Date.now() + 500;
+    state.selectedPropertySnapshot = property;
+    await openSavedPropertyFromMap_(property, null, { refresh: false, latlng });
+    elements.mapStatusText.textContent = "Saved property opened.";
+    return;
+  }
+
   const savedProperty = await findSavedPropertyAtLatLng_(event.latlng);
   if (savedProperty) {
     state.suppressMapClickUntil = Date.now() + 500;
@@ -514,21 +523,6 @@ async function handleMapClickPreview(event) {
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
   }
-}
-
-function handleMapContainerClick_(event) {
-  if (!state.hoveredSavedProperty) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  state.suppressMapClickUntil = Date.now() + 500;
-  const property = state.hoveredSavedProperty;
-  const latlng = state.hoveredSavedLatLng || { lat: property.lat, lng: property.lng };
-  state.selectedPropertySnapshot = property;
-  void openSavedPropertyFromMap_(property, null, { refresh: false, latlng });
-  elements.mapStatusText.textContent = "Saved property opened.";
 }
 
 function highlightBuilding(polygon) {
