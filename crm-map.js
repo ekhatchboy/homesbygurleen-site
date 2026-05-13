@@ -306,8 +306,8 @@ function renderSavedShapes() {
     polygon.addTo(state.savedShapeLayer);
   });
 
-  state.savedShapeLayer.bringToFront();
-  state.markerLayer?.bringToFront();
+  bringLayerGroupToFront_(state.savedShapeLayer);
+  bringLayerGroupToFront_(state.markerLayer);
 }
 
 async function loadBuildingFootprints() {
@@ -413,8 +413,8 @@ out skel qt;
       layer.addTo(state.buildingLayer);
     });
     refreshBuildingStyles();
-    state.savedShapeLayer?.bringToFront();
-    state.markerLayer?.bringToFront();
+    bringLayerGroupToFront_(state.savedShapeLayer);
+    bringLayerGroupToFront_(state.markerLayer);
   } catch {
     // Ignore footprint fetch failures quietly; the saved marker workflow still works.
   }
@@ -1560,6 +1560,18 @@ function getSavedShapeStyle_(status) {
   };
 }
 
+function bringLayerGroupToFront_(layerGroup) {
+  if (!layerGroup?.eachLayer) {
+    return;
+  }
+
+  layerGroup.eachLayer((layer) => {
+    if (typeof layer.bringToFront === "function") {
+      layer.bringToFront();
+    }
+  });
+}
+
 function isLocationMatch(centroid, entry) {
   if (!centroid || !entry || typeof entry.lat !== "number" || typeof entry.lng !== "number") {
     return false;
@@ -1579,7 +1591,11 @@ function isBuildingMatch(layer, entry) {
     }
   }
 
-  return isLocationMatch(layer.__centroid, entry);
+  if (isLocationMatch(layer.__centroid, entry)) {
+    return true;
+  }
+
+  return isPropertyShapeHit_(entry, layer.__centroid);
 }
 
 async function findSavedPropertyForBuilding_(layer, location) {
@@ -1601,6 +1617,10 @@ async function findSavedPropertyForBuilding_(layer, location) {
 function findSavedPropertyForBuildingInList_(properties, layer, location) {
   return properties.find((entry) => {
     if (isBuildingMatch(layer, entry)) {
+      return true;
+    }
+
+    if (isPropertyShapeHit_(entry, location)) {
       return true;
     }
 
@@ -1649,6 +1669,18 @@ function findSavedPropertyAtLatLngInList_(properties, latlng) {
   }
 
   return closestDistance <= 0.00035 ? closest : null;
+}
+
+function isPropertyShapeHit_(property, latlng) {
+  const lat = Number(latlng?.lat);
+  const lng = Number(latlng?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return false;
+  }
+
+  const ring = parseShapePoints_(property?.shapePoints);
+  return ring.length >= 3 && isPointInsidePolygon_([lat, lng], ring);
 }
 
 async function openSavedPropertyFromMap_(property, layer, options = {}) {
