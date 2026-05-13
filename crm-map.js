@@ -253,11 +253,17 @@ function renderMapMarkers() {
     });
 
     const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
-    marker.bindPopup(`<strong>${escapeHtml(property.address)}</strong><br>${escapeHtml(property.leadName || "No lead linked yet")}<br>${escapeHtml(readableStatus(property.status))}`);
-    marker.on("click", () => {
-      state.selectedId = property.id;
-      state.previewProperty = null;
-      renderPropertyDetail();
+    marker.on("click", (event) => {
+      if (event?.originalEvent) {
+        L.DomEvent.stop(event.originalEvent);
+      }
+
+      state.suppressMapClickUntil = Date.now() + 500;
+      void openSavedPropertyFromMap_(property, null, {
+        refresh: true,
+        latlng: event?.latlng || { lat: property.lat, lng: property.lng }
+      });
+      elements.mapStatusText.textContent = "Saved property opened.";
     });
   });
 
