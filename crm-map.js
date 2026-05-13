@@ -300,6 +300,7 @@ function renderSavedShapes() {
       bubblingMouseEvents: false,
       interactive: true
     });
+    const centroid = getPolygonCentroid(latLngs);
     const openSavedShape = (event) => {
       if (event?.originalEvent) {
         L.DomEvent.preventDefault(event.originalEvent);
@@ -308,7 +309,10 @@ function renderSavedShapes() {
 
       state.suppressMapClickUntil = Date.now() + 500;
       state.selectedPropertySnapshot = property;
-      void openSavedPropertyFromMap_(property, polygon, { refresh: false, latlng: event?.latlng });
+      void openSavedPropertyFromMap_(property, polygon, {
+        refresh: false,
+        latlng: event?.latlng || centroid || { lat: property.lat, lng: property.lng }
+      });
       elements.mapStatusText.textContent = "Saved property opened.";
     };
     polygon.on("click", openSavedShape);
@@ -332,6 +336,30 @@ function renderSavedShapes() {
       }
     });
     polygon.addTo(state.savedShapeLayer);
+
+    if (centroid) {
+      const clickTarget = L.circleMarker([centroid.lat, centroid.lng], {
+        radius: 18,
+        stroke: true,
+        color: "rgba(255, 255, 255, 0.01)",
+        weight: 22,
+        opacity: 0.01,
+        fill: true,
+        fillColor: "rgba(255, 255, 255, 0.01)",
+        fillOpacity: 0.01,
+        interactive: true,
+        bubblingMouseEvents: false
+      });
+      clickTarget.on("click", openSavedShape);
+      clickTarget.on("mouseover", (event) => {
+        state.hoveredSavedProperty = property;
+        state.hoveredSavedLatLng = event?.latlng || centroid;
+        if (elements.mapHoverReadout) {
+          elements.mapHoverReadout.textContent = `${property.address} is ${readableStatus(property.status)}.`;
+        }
+      });
+      clickTarget.addTo(state.savedShapeLayer);
+    }
   });
 
   bringLayerGroupToFront_(state.savedShapeLayer);
