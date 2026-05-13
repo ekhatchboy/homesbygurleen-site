@@ -4,6 +4,8 @@ const state = {
   properties: [],
   selectedId: "",
   selectedPropertySnapshot: null,
+  hoveredSavedProperty: null,
+  hoveredSavedLatLng: null,
   filter: "all",
   map: null,
   markerLayer: null,
@@ -64,6 +66,7 @@ function initializeMap() {
   state.savedShapeLayer = L.layerGroup().addTo(state.map);
   state.map.on("moveend zoomend", scheduleBuildingReload_);
   state.map.on("click", handleMapClickPreview);
+  state.map.getContainer()?.addEventListener("click", handleMapContainerClick_, true);
   scheduleBuildingReload_(0);
 }
 
@@ -306,12 +309,23 @@ function renderSavedShapes() {
     };
     polygon.on("click", openSavedShape);
     polygon.on("mousedown", openSavedShape);
-    polygon.on("mouseover", () => {
+    polygon.on("mouseup", openSavedShape);
+    polygon.on("dblclick", openSavedShape);
+    polygon.on("mouseover", (event) => {
+      state.hoveredSavedProperty = property;
+      state.hoveredSavedLatLng = event?.latlng || { lat: property.lat, lng: property.lng };
       if (elements.mapHoverReadout) {
         elements.mapHoverReadout.textContent = `${property.address} is ${readableStatus(property.status)}.`;
       }
     });
     polygon.on("mouseout", () => {
+      const hoveredId = property.id;
+      window.setTimeout(() => {
+        if (state.hoveredSavedProperty?.id === hoveredId) {
+          state.hoveredSavedProperty = null;
+          state.hoveredSavedLatLng = null;
+        }
+      }, 350);
       if (elements.mapHoverReadout) {
         elements.mapHoverReadout.textContent = "Hover a saved house shape to see its current color and status.";
       }
@@ -500,6 +514,21 @@ async function handleMapClickPreview(event) {
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "I couldn't identify that spot on the map.";
   }
+}
+
+function handleMapContainerClick_(event) {
+  if (!state.hoveredSavedProperty) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  state.suppressMapClickUntil = Date.now() + 500;
+  const property = state.hoveredSavedProperty;
+  const latlng = state.hoveredSavedLatLng || { lat: property.lat, lng: property.lng };
+  state.selectedPropertySnapshot = property;
+  void openSavedPropertyFromMap_(property, null, { refresh: false, latlng });
+  elements.mapStatusText.textContent = "Saved property opened.";
 }
 
 function highlightBuilding(polygon) {
