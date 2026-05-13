@@ -319,6 +319,7 @@ function renderSavedShapes() {
     polygon.on("mouseover", (event) => {
       state.hoveredSavedProperty = property;
       state.hoveredSavedLatLng = event?.latlng || { lat: property.lat, lng: property.lng };
+      openSavedPropertyOnHover_(property, polygon, state.hoveredSavedLatLng);
       if (elements.mapHoverReadout) {
         elements.mapHoverReadout.textContent = `${property.address} is ${readableStatus(property.status)}.`;
       }
@@ -354,6 +355,7 @@ function renderSavedShapes() {
       clickTarget.on("mouseover", (event) => {
         state.hoveredSavedProperty = property;
         state.hoveredSavedLatLng = event?.latlng || centroid;
+        openSavedPropertyOnHover_(property, polygon, state.hoveredSavedLatLng);
         if (elements.mapHoverReadout) {
           elements.mapHoverReadout.textContent = `${property.address} is ${readableStatus(property.status)}.`;
         }
@@ -590,6 +592,20 @@ function handleSavedPropertyPointerUp_(event) {
   state.selectedPropertySnapshot = property;
   void openSavedPropertyFromMap_(property, null, { refresh: false, latlng });
   elements.mapStatusText.textContent = "Saved property opened.";
+}
+
+function openSavedPropertyOnHover_(property, layer, latlng) {
+  if (!property?.id || state.selectedId === property.id) {
+    return;
+  }
+
+  state.selectedBuildingLayer = layer || state.selectedBuildingLayer;
+  state.previewProperty = null;
+  state.selectedId = property.id;
+  state.selectedPropertySnapshot = property;
+  renderPropertyDetail();
+  openSavedPropertyPopup_(property, latlng);
+  refreshBuildingStyles();
 }
 
 function highlightBuilding(polygon) {
