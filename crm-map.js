@@ -278,9 +278,14 @@ function renderSavedShapes() {
     }
 
     const polygon = L.polygon(latLngs, getSavedShapeStyle_(property.status));
-    polygon.on("click", () => {
-      state.selectedId = property.id;
-      render();
+    polygon.on("click", (event) => {
+      if (event?.originalEvent) {
+        L.DomEvent.stop(event.originalEvent);
+      }
+
+      state.suppressMapClickUntil = Date.now() + 500;
+      void openSavedPropertyFromMap_(property, polygon, { refresh: true });
+      elements.mapStatusText.textContent = "Saved property opened.";
     });
     polygon.on("mouseover", () => {
       if (elements.mapHoverReadout) {
@@ -402,6 +407,8 @@ out skel qt;
       layer.addTo(state.buildingLayer);
     });
     refreshBuildingStyles();
+    state.savedShapeLayer?.bringToFront();
+    state.markerLayer?.bringToFront();
   } catch {
     // Ignore footprint fetch failures quietly; the saved marker workflow still works.
   }
@@ -428,7 +435,7 @@ async function handleBuildingClick(latLngs, polygon) {
 
   const existingProperty = await findSavedPropertyForBuilding_(polygon, centroid);
   if (existingProperty) {
-    await openSavedPropertyFromMap_(existingProperty, polygon);
+    await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: true });
     elements.mapStatusText.textContent = "Saved property opened.";
     return;
   }
@@ -1196,7 +1203,7 @@ async function showPreviewMarker(location, address, preferredBuilding) {
 
   const existingProperty = await findSavedPropertyForBuilding_(matchedBuilding, location);
   if (existingProperty) {
-    await openSavedPropertyFromMap_(existingProperty, matchedBuilding);
+    await openSavedPropertyFromMap_(existingProperty, matchedBuilding, { refresh: true });
     return true;
   }
 
@@ -1585,7 +1592,7 @@ function findSavedPropertyForBuildingInList_(properties, layer, location) {
   }) || null;
 }
 
-async function openSavedPropertyFromMap_(property, layer) {
+async function openSavedPropertyFromMap_(property, layer, options = {}) {
   if (!property?.id) {
     return;
   }
@@ -1593,6 +1600,13 @@ async function openSavedPropertyFromMap_(property, layer) {
   state.selectedBuildingLayer = layer || state.selectedBuildingLayer;
   state.previewProperty = null;
   state.selectedId = property.id;
+  state.map?.closePopup();
+  render();
+  refreshBuildingStyles();
+
+  if (options.refresh === false) {
+    return;
+  }
 
   try {
     const freshProperties = await loadPropertiesFromSheet_();
@@ -1603,14 +1617,13 @@ async function openSavedPropertyFromMap_(property, layer) {
         state.properties[index] = freshProperty;
       }
       state.selectedId = freshProperty.id;
+      saveProperties();
+      render();
+      refreshBuildingStyles();
     }
   } catch {
     // The local copy is still enough to open the detail card.
   }
-
-  state.map?.closePopup();
-  render();
-  refreshBuildingStyles();
 }
 
 function findNearestBuildingLayer(lat, lng) {
