@@ -6,6 +6,7 @@ const state = {
   selectedPropertySnapshot: null,
   hoveredSavedProperty: null,
   hoveredSavedLatLng: null,
+  mapPointerDown: null,
   filter: "all",
   map: null,
   markerLayer: null,
@@ -66,6 +67,7 @@ function initializeMap() {
   state.savedShapeLayer = L.layerGroup().addTo(state.map);
   state.map.on("moveend zoomend", scheduleBuildingReload_);
   state.map.on("click", handleMapClickPreview);
+  state.map.getContainer()?.addEventListener("pointerdown", handleMapPointerDown_);
   state.map.getContainer()?.addEventListener("pointerup", handleSavedPropertyPointerUp_);
   scheduleBuildingReload_(0);
 }
@@ -489,6 +491,8 @@ async function handleMapClickPreview(event) {
     return;
   }
 
+  renderAddressSuggestions([]);
+
   if (Date.now() < state.suppressMapClickUntil) {
     return;
   }
@@ -525,13 +529,35 @@ async function handleMapClickPreview(event) {
   }
 }
 
-function handleSavedPropertyPointerUp_() {
-  if (!state.hoveredSavedProperty || Date.now() < state.suppressMapClickUntil) {
+function handleMapPointerDown_(event) {
+  state.mapPointerDown = {
+    x: Number(event.clientX),
+    y: Number(event.clientY),
+    time: Date.now()
+  };
+}
+
+function handleSavedPropertyPointerUp_(event) {
+  if (!state.map || Date.now() < state.suppressMapClickUntil) {
     return;
   }
 
-  const property = state.hoveredSavedProperty;
-  const latlng = state.hoveredSavedLatLng || { lat: property.lat, lng: property.lng };
+  const start = state.mapPointerDown;
+  state.mapPointerDown = null;
+
+  if (start) {
+    const distance = Math.hypot(Number(event.clientX) - start.x, Number(event.clientY) - start.y);
+    if (distance > 8) {
+      return;
+    }
+  }
+
+  const latlng = state.map.mouseEventToLatLng(event);
+  const property = findSavedPropertyAtLatLngInList_(state.properties, latlng) || state.hoveredSavedProperty;
+  if (!property) {
+    return;
+  }
+
   state.suppressMapClickUntil = Date.now() + 500;
   state.selectedPropertySnapshot = property;
   void openSavedPropertyFromMap_(property, null, { refresh: false, latlng });
