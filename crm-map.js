@@ -1223,6 +1223,7 @@ function setPreviewStatus(status) {
     return;
   }
 
+  syncVisiblePreviewNoteDraft_();
   state.previewProperty.status = status || "upcoming";
   renderPropertyDetail();
   refreshBuildingStyles();
@@ -1252,6 +1253,7 @@ async function savePreviewProperty() {
 
   try {
     const existing = findMatchingPropertyForPreview_();
+    const previewNote = String(preview.notes || "").trim();
     if (existing) {
       existing.address = preview.address;
       existing.status = preview.status;
@@ -1259,30 +1261,33 @@ async function savePreviewProperty() {
       existing.lng = preview.lng;
       existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
       existing.shapePoints = preview.shapePoints || existing.shapePoints || "";
-      const previewNote = String(preview.notes || "").trim();
       existing.notes = appendUniqueNote_(existing.notes, previewNote);
       existing.showInList = false;
       if (preview.status === "visited" && !existing.visitDate) {
         existing.visitDate = new Date().toISOString().slice(0, 10);
       }
+      savedProperty = existing;
+      openSavedPropertyDetail_(savedProperty);
       const savedExisting = await savePropertyToSheet_(existing);
       Object.assign(existing, savedExisting);
-      savedProperty = existing;
     } else {
-      savedProperty = await savePropertyToSheet_({
+      savedProperty = {
         id: crypto.randomUUID(),
         address: preview.address,
         leadName: "",
         status: preview.status,
         visitDate: preview.status === "visited" ? new Date().toISOString().slice(0, 10) : "",
-        notes: String(preview.notes || "").trim(),
+        notes: previewNote,
         lat: preview.lat,
         lng: preview.lng,
         buildingKey: preview.buildingKey || "",
         shapePoints: preview.shapePoints || "",
         showInList: false
-      });
+      };
       state.properties.unshift(savedProperty);
+      openSavedPropertyDetail_(savedProperty);
+      const savedFromSheet = await savePropertyToSheet_(savedProperty);
+      Object.assign(savedProperty, savedFromSheet);
     }
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to save house color right now.";
@@ -1294,15 +1299,23 @@ async function savePreviewProperty() {
     return;
   }
 
+  openSavedPropertyDetail_(savedProperty);
+  refreshBuildingStyles();
+  elements.mapStatusText.textContent = "House color saved on the map.";
+}
+
+function openSavedPropertyDetail_(property) {
+  if (!property?.id) {
+    return;
+  }
+
   saveProperties();
   if (!(state.previewPopup && state.map)) {
     state.map?.closePopup();
   }
   clearPreviewMarker();
-  state.selectedId = savedProperty.id;
+  state.selectedId = property.id;
   render();
-  refreshBuildingStyles();
-  elements.mapStatusText.textContent = "House color saved on the map.";
 }
 
 function syncVisiblePreviewInputs_() {
@@ -1310,8 +1323,7 @@ function syncVisiblePreviewInputs_() {
     return;
   }
 
-  const visibleNote = document.querySelector("[data-preview-notes]");
-  const sidebarNote = document.querySelector("#propertyNotes");
+  syncVisiblePreviewNoteDraft_();
   const activeStatusButton = document.querySelector("[data-preview-status].is-active, [data-popup-preview-status].is-active");
 
   if (activeStatusButton) {
@@ -1320,7 +1332,15 @@ function syncVisiblePreviewInputs_() {
       activeStatusButton.getAttribute("data-popup-preview-status") ||
       state.previewProperty.status;
   }
+}
 
+function syncVisiblePreviewNoteDraft_() {
+  if (!state.previewProperty) {
+    return;
+  }
+
+  const visibleNote = document.querySelector("[data-preview-notes]");
+  const sidebarNote = document.querySelector("#propertyNotes");
   if (visibleNote && String(visibleNote.value || "").trim()) {
     state.previewProperty.notes = visibleNote.value || "";
     return;
