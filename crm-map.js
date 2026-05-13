@@ -309,9 +309,6 @@ function renderSavedShapes() {
       elements.mapStatusText.textContent = "Saved property opened.";
     };
     polygon.on("click", openSavedShape);
-    polygon.on("mousedown", openSavedShape);
-    polygon.on("mouseup", openSavedShape);
-    polygon.on("dblclick", openSavedShape);
     polygon.on("mouseover", (event) => {
       state.hoveredSavedProperty = property;
       state.hoveredSavedLatLng = event?.latlng || { lat: property.lat, lng: property.lng };
@@ -495,17 +492,7 @@ async function handleMapClickPreview(event) {
     return;
   }
 
-  if (state.hoveredSavedProperty) {
-    const property = state.hoveredSavedProperty;
-    const latlng = state.hoveredSavedLatLng || event.latlng;
-    state.suppressMapClickUntil = Date.now() + 500;
-    state.selectedPropertySnapshot = property;
-    await openSavedPropertyFromMap_(property, null, { refresh: false, latlng });
-    elements.mapStatusText.textContent = "Saved property opened.";
-    return;
-  }
-
-  const savedProperty = await findSavedPropertyAtLatLng_(event.latlng);
+  const savedProperty = findSavedPropertyAtLatLngInList_(state.properties, event.latlng);
   if (savedProperty) {
     state.suppressMapClickUntil = Date.now() + 500;
     state.selectedPropertySnapshot = savedProperty;
