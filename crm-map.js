@@ -266,7 +266,7 @@ function renderMapMarkers() {
       state.suppressMapClickUntil = Date.now() + 500;
       state.selectedPropertySnapshot = property;
       void openSavedPropertyFromMap_(property, null, {
-        refresh: true,
+        refresh: false,
         latlng: event?.latlng || { lat: property.lat, lng: property.lng }
       });
       elements.mapStatusText.textContent = "Saved property opened.";
@@ -301,7 +301,7 @@ function renderSavedShapes() {
 
       state.suppressMapClickUntil = Date.now() + 500;
       state.selectedPropertySnapshot = property;
-      void openSavedPropertyFromMap_(property, polygon, { refresh: true, latlng: event?.latlng });
+      void openSavedPropertyFromMap_(property, polygon, { refresh: false, latlng: event?.latlng });
       elements.mapStatusText.textContent = "Saved property opened.";
     };
     polygon.on("click", openSavedShape);
@@ -455,7 +455,7 @@ async function handleBuildingClick(latLngs, polygon) {
   const existingProperty = await findSavedPropertyForBuilding_(polygon, centroid);
   if (existingProperty) {
     state.selectedPropertySnapshot = existingProperty;
-    await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: true, latlng: centroid });
+    await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: false, latlng: centroid });
     elements.mapStatusText.textContent = "Saved property opened.";
     return;
   }
@@ -484,7 +484,7 @@ async function handleMapClickPreview(event) {
   if (savedProperty) {
     state.suppressMapClickUntil = Date.now() + 500;
     state.selectedPropertySnapshot = savedProperty;
-    await openSavedPropertyFromMap_(savedProperty, null, { refresh: true, latlng: event.latlng });
+    await openSavedPropertyFromMap_(savedProperty, null, { refresh: false, latlng: event.latlng });
     elements.mapStatusText.textContent = "Saved property opened.";
     return;
   }
@@ -1290,7 +1290,7 @@ async function showPreviewMarker(location, address, preferredBuilding) {
 
   const existingProperty = await findSavedPropertyForBuilding_(matchedBuilding, location);
   if (existingProperty) {
-    await openSavedPropertyFromMap_(existingProperty, matchedBuilding, { refresh: true });
+    await openSavedPropertyFromMap_(existingProperty, matchedBuilding, { refresh: false });
     return true;
   }
 
@@ -1777,9 +1777,9 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
 
   try {
     const freshProperties = await loadPropertiesFromSheet_();
-    const freshProperty = freshProperties?.find((entry) => entry.id === property.id);
+    const freshProperty = findFreshPropertyMatch_(freshProperties, property);
     if (freshProperty) {
-      const index = state.properties.findIndex((entry) => entry.id === property.id);
+      const index = state.properties.findIndex((entry) => isSameSavedProperty_(entry, property));
       if (index >= 0) {
         state.properties[index] = freshProperty;
       }
@@ -1793,6 +1793,45 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
   } catch {
     // The local copy is still enough to open the detail card.
   }
+}
+
+function findFreshPropertyMatch_(properties, property) {
+  if (!Array.isArray(properties) || !property) {
+    return null;
+  }
+
+  return properties.find((entry) => isSameSavedProperty_(entry, property)) || null;
+}
+
+function isSameSavedProperty_(left, right) {
+  if (!left || !right) {
+    return false;
+  }
+
+  const leftAddress = normalizeComparableText_(left.address);
+  const rightAddress = normalizeComparableText_(right.address);
+  const leftShape = String(left.shapePoints || "").trim();
+  const rightShape = String(right.shapePoints || "").trim();
+
+  if (leftShape && rightShape && leftShape === rightShape) {
+    return true;
+  }
+
+  if (leftAddress && rightAddress && leftAddress === rightAddress) {
+    return true;
+  }
+
+  return String(left.id || "").trim() &&
+    String(right.id || "").trim() &&
+    String(left.id || "").trim() === String(right.id || "").trim() &&
+    isLocationMatch(left, right);
+}
+
+function normalizeComparableText_(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function openSavedPropertyPopup_(property, latlng) {
