@@ -282,7 +282,7 @@ function renderSavedShapes() {
       bubblingMouseEvents: false,
       interactive: true
     });
-    polygon.on("click", (event) => {
+    const openSavedShape = (event) => {
       if (event?.originalEvent) {
         L.DomEvent.stop(event.originalEvent);
       }
@@ -290,7 +290,9 @@ function renderSavedShapes() {
       state.suppressMapClickUntil = Date.now() + 500;
       void openSavedPropertyFromMap_(property, polygon, { refresh: true, latlng: event?.latlng });
       elements.mapStatusText.textContent = "Saved property opened.";
-    });
+    };
+    polygon.on("click", openSavedShape);
+    polygon.on("mousedown", openSavedShape);
     polygon.on("mouseover", () => {
       if (elements.mapHoverReadout) {
         elements.mapHoverReadout.textContent = `${property.address} is ${readableStatus(property.status)}.`;
@@ -461,6 +463,14 @@ async function handleMapClickPreview(event) {
   }
 
   if (Date.now() < state.suppressMapClickUntil) {
+    return;
+  }
+
+  const savedProperty = await findSavedPropertyAtLatLng_(event.latlng);
+  if (savedProperty) {
+    state.suppressMapClickUntil = Date.now() + 500;
+    await openSavedPropertyFromMap_(savedProperty, null, { refresh: true, latlng: event.latlng });
+    elements.mapStatusText.textContent = "Saved property opened.";
     return;
   }
 
@@ -1596,6 +1606,49 @@ function findSavedPropertyForBuildingInList_(properties, layer, location) {
 
     return isLocationMatch(location, entry);
   }) || null;
+}
+
+async function findSavedPropertyAtLatLng_(latlng) {
+  const localMatch = findSavedPropertyAtLatLngInList_(state.properties, latlng);
+  if (localMatch) {
+    return localMatch;
+  }
+
+  const freshProperties = await loadPropertiesFromSheet_();
+  if (!freshProperties?.length) {
+    return null;
+  }
+
+  state.properties = freshProperties;
+  saveProperties();
+  return findSavedPropertyAtLatLngInList_(state.properties, latlng);
+}
+
+function findSavedPropertyAtLatLngInList_(properties, latlng) {
+  const lat = Number(latlng?.lat);
+  const lng = Number(latlng?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  let closest = null;
+  let closestDistance = Infinity;
+
+  for (const property of properties) {
+    const ring = parseShapePoints_(property.shapePoints);
+    if (ring.length >= 3 && isPointInsidePolygon_([lat, lng], ring)) {
+      return property;
+    }
+
+    const distance = Math.hypot(Number(property.lat) - lat, Number(property.lng) - lng);
+    if (Number.isFinite(distance) && distance < closestDistance) {
+      closestDistance = distance;
+      closest = property;
+    }
+  }
+
+  return closestDistance <= 0.00035 ? closest : null;
 }
 
 async function openSavedPropertyFromMap_(property, layer, options = {}) {
