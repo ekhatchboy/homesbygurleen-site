@@ -277,14 +277,18 @@ function renderSavedShapes() {
       return;
     }
 
-    const polygon = L.polygon(latLngs, getSavedShapeStyle_(property.status));
+    const polygon = L.polygon(latLngs, {
+      ...getSavedShapeStyle_(property.status),
+      bubblingMouseEvents: false,
+      interactive: true
+    });
     polygon.on("click", (event) => {
       if (event?.originalEvent) {
         L.DomEvent.stop(event.originalEvent);
       }
 
       state.suppressMapClickUntil = Date.now() + 500;
-      void openSavedPropertyFromMap_(property, polygon, { refresh: true });
+      void openSavedPropertyFromMap_(property, polygon, { refresh: true, latlng: event?.latlng });
       elements.mapStatusText.textContent = "Saved property opened.";
     });
     polygon.on("mouseover", () => {
@@ -435,7 +439,7 @@ async function handleBuildingClick(latLngs, polygon) {
 
   const existingProperty = await findSavedPropertyForBuilding_(polygon, centroid);
   if (existingProperty) {
-    await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: true });
+    await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: true, latlng: centroid });
     elements.mapStatusText.textContent = "Saved property opened.";
     return;
   }
@@ -1560,7 +1564,9 @@ function isBuildingMatch(layer, entry) {
   }
 
   if (entry.buildingKey && layer.__buildingKey) {
-    return entry.buildingKey === layer.__buildingKey;
+    if (entry.buildingKey === layer.__buildingKey) {
+      return true;
+    }
   }
 
   return isLocationMatch(layer.__centroid, entry);
@@ -1602,6 +1608,7 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
   state.selectedId = property.id;
   state.map?.closePopup();
   render();
+  openSavedPropertyPopup_(property, options.latlng);
   refreshBuildingStyles();
 
   if (options.refresh === false) {
@@ -1619,11 +1626,45 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
       state.selectedId = freshProperty.id;
       saveProperties();
       render();
+      openSavedPropertyPopup_(freshProperty, options.latlng);
       refreshBuildingStyles();
     }
   } catch {
     // The local copy is still enough to open the detail card.
   }
+}
+
+function openSavedPropertyPopup_(property, latlng) {
+  if (!state.map || !property) {
+    return;
+  }
+
+  const popupLocation = latlng || {
+    lat: Number(property.lat),
+    lng: Number(property.lng)
+  };
+
+  if (!Number.isFinite(Number(popupLocation.lat)) || !Number.isFinite(Number(popupLocation.lng))) {
+    return;
+  }
+
+  const content = `
+    <div class="map-preview-popup">
+      <strong>${escapeHtml(property.address || "Saved property")}</strong>
+      <p class="map-saved-popup-status">${escapeHtml(readableStatus(property.status))}</p>
+      <p class="map-saved-popup-note">${escapeHtml(property.notes || "No notes yet.")}</p>
+    </div>
+  `;
+
+  L.popup({
+    closeButton: true,
+    autoClose: true,
+    closeOnClick: true,
+    className: "map-preview-leaflet-popup"
+  })
+    .setLatLng(popupLocation)
+    .setContent(content)
+    .openOn(state.map);
 }
 
 function findNearestBuildingLayer(lat, lng) {
