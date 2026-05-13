@@ -626,7 +626,7 @@ async function loadLiveAddressSuggestions_(query, requestToken) {
     }
 
     renderAddressSuggestions(suggestions, {
-      copy: suggestions.length ? "Suggested addresses as you type" : ""
+      copy: suggestions.length ? "Suggested places and addresses as you type" : ""
     });
   } catch {
     if (requestToken === state.addressSuggestToken) {
@@ -711,7 +711,7 @@ async function handlePropertySearch() {
   }
 
   syncSearchButton(true);
-  elements.mapStatusText.textContent = "Searching that address on the map.";
+  elements.mapStatusText.textContent = "Searching that place or address on the map.";
   renderAddressSuggestions([]);
 
   try {
@@ -720,11 +720,11 @@ async function handlePropertySearch() {
     state.map.setView([location.lat, location.lng], 17, { animate: true });
     await waitForMapIdle_();
     await showPreviewMarker(location, normalizedAddress);
-    elements.mapStatusText.textContent = "Address found on the California map. Choose a color and save it on the map.";
+    elements.mapStatusText.textContent = "Location found on the California map. Choose a color and save it on the map.";
   } catch (error) {
     const suggestions = await getAddressSuggestions(address);
     if (suggestions.length) {
-      elements.mapStatusText.textContent = "I couldn't place that exact address, but I found a few likely matches below.";
+      elements.mapStatusText.textContent = "I couldn't place that exact search, but I found a few likely matches below.";
       renderAddressSuggestions(suggestions, { copy: "Did you mean one of these?" });
     } else {
       elements.mapStatusText.textContent = error.message || "Unable to preview that address right now.";
@@ -741,7 +741,7 @@ async function geocodeAddress(address) {
     return { lat: match.lat, lng: match.lng };
   }
 
-  throw new Error("I could not place that address on the map. Try a fuller address or choose one of the suggestions.");
+  throw new Error("I could not place that search on the map. Try a fuller address, city, or business name.");
 }
 
 async function getAddressSuggestions(address, limit = 5) {
@@ -872,7 +872,7 @@ async function getLiveAddressSuggestions_(query, limit = 5) {
 }
 
 async function fetchArcGisAddressSuggestions_(query, limit, resolveLocations = true) {
-  const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?f=pjson&maxSuggestions=${Math.max(limit, 5)}&countryCode=USA&category=Address&searchExtent=-124.48,32.45,-114.13,42.05&text=${encodeURIComponent(query)}`, {
+  const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?f=pjson&maxSuggestions=${Math.max(limit, 5)}&countryCode=USA&searchExtent=-124.48,32.45,-114.13,42.05&location=-119.75,37.25&text=${encodeURIComponent(query)}`, {
     headers: { "Accept": "application/json" }
   });
 
@@ -921,7 +921,7 @@ async function resolveArcGisSuggestion_(text, magicKey) {
     return null;
   }
 
-  const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=pjson&outFields=Match_addr,Addr_type&maxLocations=1&countryCode=USA&searchExtent=-124.48,32.45,-114.13,42.05&location=-119.75,37.25&singleLine=${encodeURIComponent(text)}&magicKey=${encodeURIComponent(magicKey)}`, {
+  const response = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=pjson&outFields=Match_addr,Addr_type,PlaceName&maxLocations=1&countryCode=USA&searchExtent=-124.48,32.45,-114.13,42.05&location=-119.75,37.25&singleLine=${encodeURIComponent(text)}&magicKey=${encodeURIComponent(magicKey)}`, {
     headers: { "Accept": "application/json" }
   });
 
@@ -1009,10 +1009,8 @@ async function applyAddressSuggestion(suggestion) {
 
     state.map.setView([lat, lng], 17, { animate: true });
     await waitForMapIdle_();
-    await showPreviewMarker(
-      { lat, lng },
-      chosenAddress || await reverseGeocodeLatLng(lat, lng).catch(() => chosenAddress)
-    );
+    const resolvedAddress = await reverseGeocodeLatLng(lat, lng).catch(() => chosenAddress);
+    await showPreviewMarker({ lat, lng }, resolvedAddress);
     renderAddressSuggestions([]);
     elements.mapStatusText.textContent = "Suggested address loaded. Choose a color and save it on the map.";
   } catch (error) {
@@ -1209,6 +1207,8 @@ async function savePreviewProperty() {
       return;
   }
 
+  let savedPropertyId = "";
+
   try {
     const existing = findMatchingPropertyForPreview_();
     if (existing) {
@@ -1225,6 +1225,7 @@ async function savePreviewProperty() {
       }
       const savedExisting = await savePropertyToSheet_(existing);
       Object.assign(existing, savedExisting);
+      savedPropertyId = existing.id;
     } else {
       const savedProperty = await savePropertyToSheet_({
         id: crypto.randomUUID(),
@@ -1240,18 +1241,19 @@ async function savePreviewProperty() {
         showInList: false
       });
       state.properties.unshift(savedProperty);
+      savedPropertyId = savedProperty.id;
     }
   } catch (error) {
     elements.mapStatusText.textContent = error.message || "Unable to save house color right now.";
     return;
   }
 
-  state.selectedId = "";
   saveProperties();
   if (!(state.previewPopup && state.map)) {
     state.map?.closePopup();
   }
   clearPreviewMarker();
+  state.selectedId = savedPropertyId;
   render();
   refreshBuildingStyles();
   elements.mapStatusText.textContent = "House color saved on the map.";
