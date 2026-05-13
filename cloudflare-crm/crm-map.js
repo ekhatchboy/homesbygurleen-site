@@ -262,6 +262,7 @@ function renderMapMarkers() {
     const marker = L.marker([property.lat, property.lng], { icon }).addTo(state.markerLayer);
     marker.on("click", (event) => {
       if (event?.originalEvent) {
+        L.DomEvent.preventDefault(event.originalEvent);
         L.DomEvent.stop(event.originalEvent);
       }
 
@@ -298,6 +299,7 @@ function renderSavedShapes() {
     });
     const openSavedShape = (event) => {
       if (event?.originalEvent) {
+        L.DomEvent.preventDefault(event.originalEvent);
         L.DomEvent.stop(event.originalEvent);
       }
 
