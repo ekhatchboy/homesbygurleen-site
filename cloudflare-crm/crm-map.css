@@ -238,6 +238,10 @@ body {
   background: rgba(255, 255, 255, 0.66);
 }
 .map-detail-field span { display: block; margin-bottom: 6px; }
+.map-detail-status-field {
+  background: linear-gradient(135deg, rgba(255, 252, 247, 0.9), rgba(238, 230, 218, 0.72));
+  border-color: rgba(138, 75, 58, 0.16);
+}
 .map-detail-notes {
   margin: 18px 0;
   padding: 18px;

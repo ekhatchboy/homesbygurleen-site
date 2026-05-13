@@ -523,6 +523,10 @@ function renderPropertyDetail() {
       ${renderStatusPill(property.status)}
     </div>
     <div class="map-detail-grid">
+      <div class="map-detail-field map-detail-status-field">
+        <span>Map Color / Status</span>
+        <strong>${escapeHtml(readableStatus(property.status))}</strong>
+      </div>
       <div class="map-detail-field">
         <span>Lead / Client</span>
         <strong>${escapeHtml(property.leadName || "Not linked yet")}</strong>
@@ -571,7 +575,7 @@ async function savePropertyDetailNote(propertyId) {
     return;
   }
 
-  property.notes = [property.notes, note].filter((value) => String(value || "").trim()).join("\n\n");
+  property.notes = appendUniqueNote_(property.notes, note);
   elements.mapStatusText.textContent = "Saving property note...";
 
   try {
@@ -1230,6 +1234,8 @@ async function savePreviewProperty() {
     return;
   }
 
+  syncVisiblePreviewNote_();
+
   if (state.previewPopup && state.map) {
     state.map.closePopup(state.previewPopup);
     state.previewPopup.remove();
@@ -1253,7 +1259,8 @@ async function savePreviewProperty() {
       existing.lng = preview.lng;
       existing.buildingKey = preview.buildingKey || existing.buildingKey || "";
       existing.shapePoints = preview.shapePoints || existing.shapePoints || "";
-      existing.notes = String(preview.notes || "").trim() || existing.notes || "";
+      const previewNote = String(preview.notes || "").trim();
+      existing.notes = appendUniqueNote_(existing.notes, previewNote);
       existing.showInList = false;
       if (preview.status === "visited" && !existing.visitDate) {
         existing.visitDate = new Date().toISOString().slice(0, 10);
@@ -1292,6 +1299,42 @@ async function savePreviewProperty() {
   render();
   refreshBuildingStyles();
   elements.mapStatusText.textContent = "House color saved on the map.";
+}
+
+function syncVisiblePreviewNote_() {
+  if (!state.previewProperty) {
+    return;
+  }
+
+  const visibleNote = document.querySelector("[data-preview-notes]");
+  const sidebarNote = document.querySelector("#propertyNotes");
+  if (visibleNote && String(visibleNote.value || "").trim()) {
+    state.previewProperty.notes = visibleNote.value || "";
+    return;
+  }
+
+  if (sidebarNote && String(sidebarNote.value || "").trim()) {
+    state.previewProperty.notes = sidebarNote.value || "";
+  }
+}
+
+function appendUniqueNote_(existingNotes, nextNote) {
+  const current = String(existingNotes || "").trim();
+  const incoming = String(nextNote || "").trim();
+
+  if (!incoming) {
+    return current;
+  }
+
+  if (!current) {
+    return incoming;
+  }
+
+  if (current.split(/\n{2,}/).some((entry) => entry.trim() === incoming)) {
+    return current;
+  }
+
+  return `${current}\n\n${incoming}`;
 }
 
 function loadPreviewIntoForm() {
