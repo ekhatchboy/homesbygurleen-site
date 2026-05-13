@@ -564,6 +564,7 @@ function renderPropertyDetail() {
         <strong>${property.visitDate ? escapeHtml(formatDate(property.visitDate)) : "Not set"}</strong>
       </div>
     </div>
+    ${renderSavedStatusControls_(property)}
     <div class="map-detail-notes">${escapeHtml(property.notes || "No notes yet.")}</div>
     <label class="map-detail-note-composer">
       <span>New Note</span>
@@ -581,6 +582,7 @@ function renderPropertyDetail() {
   document.querySelector("[data-save-property-note]")?.addEventListener("click", () => {
     void savePropertyDetailNote(property.id);
   });
+  attachSavedStatusControlHandlers_(property.id);
   document.querySelector("[data-edit-property]")?.addEventListener("click", () => loadPropertyIntoForm(property));
   document.querySelector("[data-clear-color]")?.addEventListener("click", () => {
     void clearPropertyColor(property.id);
@@ -591,6 +593,57 @@ function renderPropertyDetail() {
   document.querySelector("[data-delete-property]")?.addEventListener("click", () => {
     void deleteProperty(property.id);
   });
+}
+
+function renderSavedStatusControls_(property) {
+  return `
+    <div class="map-saved-status-controls">
+      <span>Change Color</span>
+      <div class="map-preview-actions">
+        <button type="button" class="map-status-button${property.status === "under-contract" ? " is-active" : ""}" data-property-status="under-contract">Gold: Under Contract</button>
+        <button type="button" class="map-status-button${property.status === "visited" ? " is-active" : ""}" data-property-status="visited">Green: Visited</button>
+        <button type="button" class="map-status-button${property.status === "do-not-go" ? " is-active" : ""}" data-property-status="do-not-go">Red: Do Not Go</button>
+      </div>
+    </div>
+  `;
+}
+
+function attachSavedStatusControlHandlers_(propertyId, root = document) {
+  root.querySelectorAll("[data-property-status]").forEach((button) => {
+    button.addEventListener("click", () => {
+      void updateSavedPropertyStatus_(propertyId, button.getAttribute("data-property-status") || "visited");
+    });
+  });
+}
+
+async function updateSavedPropertyStatus_(propertyId, status) {
+  const property = state.properties.find((entry) => entry.id === propertyId);
+  if (!property) {
+    elements.mapStatusText.textContent = "I couldn't find that saved property yet.";
+    return;
+  }
+
+  property.status = status || "visited";
+  if (property.status === "visited" && !property.visitDate) {
+    property.visitDate = new Date().toISOString().slice(0, 10);
+  }
+
+  elements.mapStatusText.textContent = "Updating house color...";
+
+  try {
+    const savedProperty = await savePropertyToSheet_(property);
+    Object.assign(property, savedProperty);
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to update that house color right now.";
+    return;
+  }
+
+  state.selectedId = property.id;
+  saveProperties();
+  render();
+  refreshBuildingStyles();
+  openSavedPropertyPopup_(property);
+  elements.mapStatusText.textContent = "House color updated.";
 }
 
 async function savePropertyDetailNote(propertyId) {
@@ -1738,6 +1791,7 @@ function openSavedPropertyPopup_(property, latlng) {
       <strong>${escapeHtml(property.address || "Saved property")}</strong>
       <p class="map-saved-popup-status">${escapeHtml(readableStatus(property.status))}</p>
       <p class="map-saved-popup-note">${escapeHtml(property.notes || "No notes yet.")}</p>
+      ${renderSavedStatusControls_(property)}
     </div>
   `;
 
@@ -1750,6 +1804,13 @@ function openSavedPropertyPopup_(property, latlng) {
     .setLatLng(popupLocation)
     .setContent(content)
     .openOn(state.map);
+
+  window.requestAnimationFrame(() => {
+    const popupRoot = document.querySelector(".map-preview-leaflet-popup .map-preview-popup");
+    if (popupRoot) {
+      attachSavedStatusControlHandlers_(property.id, popupRoot);
+    }
+  });
 }
 
 function findNearestBuildingLayer(lat, lng) {

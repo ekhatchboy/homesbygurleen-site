@@ -278,6 +278,24 @@ body {
   outline: 2px solid rgba(205, 168, 83, 0.34);
   border-color: rgba(205, 168, 83, 0.46);
 }
+.map-saved-status-controls {
+  margin: 0 0 18px;
+}
+.map-saved-status-controls > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.map-preview-popup .map-saved-status-controls {
+  margin: 12px 0 0;
+}
+.map-preview-popup .map-saved-status-controls .map-preview-actions {
+  margin-bottom: 0;
+}
 .map-detail-copy {
   margin: 0 0 18px;
   color: var(--muted);
