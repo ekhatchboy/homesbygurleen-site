@@ -3,6 +3,7 @@ const STORAGE_KEY = "hbg-property-map-v1";
 const state = {
   properties: [],
   selectedId: "",
+  selectedPropertySnapshot: null,
   filter: "all",
   map: null,
   markerLayer: null,
@@ -213,14 +214,18 @@ function renderPropertyList() {
 
   elements.propertyList.querySelectorAll("[data-property-id]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedId = button.getAttribute("data-property-id") || "";
+      const propertyId = button.getAttribute("data-property-id") || "";
+      state.selectedId = propertyId;
+      state.selectedPropertySnapshot = state.properties.find((entry) => entry.id === propertyId) || null;
       render();
       focusSelectedMarker();
     });
     button.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        state.selectedId = button.getAttribute("data-property-id") || "";
+        const propertyId = button.getAttribute("data-property-id") || "";
+        state.selectedId = propertyId;
+        state.selectedPropertySnapshot = state.properties.find((entry) => entry.id === propertyId) || null;
         render();
         focusSelectedMarker();
       }
@@ -259,6 +264,7 @@ function renderMapMarkers() {
       }
 
       state.suppressMapClickUntil = Date.now() + 500;
+      state.selectedPropertySnapshot = property;
       void openSavedPropertyFromMap_(property, null, {
         refresh: true,
         latlng: event?.latlng || { lat: property.lat, lng: property.lng }
@@ -294,6 +300,7 @@ function renderSavedShapes() {
       }
 
       state.suppressMapClickUntil = Date.now() + 500;
+      state.selectedPropertySnapshot = property;
       void openSavedPropertyFromMap_(property, polygon, { refresh: true, latlng: event?.latlng });
       elements.mapStatusText.textContent = "Saved property opened.";
     };
@@ -447,6 +454,7 @@ async function handleBuildingClick(latLngs, polygon) {
 
   const existingProperty = await findSavedPropertyForBuilding_(polygon, centroid);
   if (existingProperty) {
+    state.selectedPropertySnapshot = existingProperty;
     await openSavedPropertyFromMap_(existingProperty, polygon, { refresh: true, latlng: centroid });
     elements.mapStatusText.textContent = "Saved property opened.";
     return;
@@ -475,6 +483,7 @@ async function handleMapClickPreview(event) {
   const savedProperty = await findSavedPropertyAtLatLng_(event.latlng);
   if (savedProperty) {
     state.suppressMapClickUntil = Date.now() + 500;
+    state.selectedPropertySnapshot = savedProperty;
     await openSavedPropertyFromMap_(savedProperty, null, { refresh: true, latlng: event.latlng });
     elements.mapStatusText.textContent = "Saved property opened.";
     return;
@@ -499,7 +508,9 @@ function highlightBuilding(polygon) {
 }
 
 function renderPropertyDetail() {
-  const property = state.properties.find((entry) => entry.id === state.selectedId);
+  const property = state.selectedPropertySnapshot?.id === state.selectedId
+    ? state.selectedPropertySnapshot
+    : state.properties.find((entry) => entry.id === state.selectedId);
   if (!property) {
     if (state.previewProperty) {
       const preview = state.previewProperty;
@@ -545,6 +556,7 @@ function renderPropertyDetail() {
     }
 
     elements.propertyDetailCard.innerHTML = `<div class="map-empty-state">Click a house pin or a property in the list to open its notes.</div>`;
+    state.selectedPropertySnapshot = null;
     return;
   }
 
@@ -645,6 +657,7 @@ async function updateSavedPropertyStatus_(propertyId, status) {
   }
 
   state.selectedId = property.id;
+  state.selectedPropertySnapshot = property;
   saveProperties();
   render();
   refreshBuildingStyles();
@@ -674,6 +687,7 @@ async function savePropertyDetailNote(propertyId) {
   }
 
   state.selectedId = property.id;
+  state.selectedPropertySnapshot = property;
   saveProperties();
   render();
   elements.mapStatusText.textContent = "Note saved.";
@@ -1308,6 +1322,7 @@ function clearPreviewMarker() {
   state.previewMarker = null;
   state.previewPopup = null;
   state.previewProperty = null;
+  state.selectedPropertySnapshot = state.properties.find((entry) => entry.id === state.selectedId) || state.selectedPropertySnapshot;
   refreshBuildingStyles();
 }
 
@@ -1750,6 +1765,7 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
   state.selectedBuildingLayer = layer || state.selectedBuildingLayer;
   state.previewProperty = null;
   state.selectedId = property.id;
+  state.selectedPropertySnapshot = property;
   state.map?.closePopup();
   render();
   openSavedPropertyPopup_(property, options.latlng);
@@ -1768,6 +1784,7 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
         state.properties[index] = freshProperty;
       }
       state.selectedId = freshProperty.id;
+      state.selectedPropertySnapshot = freshProperty;
       saveProperties();
       render();
       openSavedPropertyPopup_(freshProperty, options.latlng);
