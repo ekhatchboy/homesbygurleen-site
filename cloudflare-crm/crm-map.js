@@ -598,9 +598,7 @@ function highlightBuilding(polygon) {
 }
 
 function renderPropertyDetail() {
-  const property = state.selectedPropertySnapshot?.id === state.selectedId
-    ? state.selectedPropertySnapshot
-    : state.properties.find((entry) => entry.id === state.selectedId);
+  const property = state.selectedPropertySnapshot || state.properties.find((entry) => entry.id === state.selectedId);
   if (!property) {
     if (state.previewProperty) {
       const preview = state.previewProperty;
@@ -1849,16 +1847,21 @@ function isPropertyShapeHit_(property, latlng) {
 }
 
 async function openSavedPropertyFromMap_(property, layer, options = {}) {
-  if (!property?.id) {
+  if (!property) {
     return;
   }
 
+  ensurePropertyId_(property);
   state.selectedBuildingLayer = layer || state.selectedBuildingLayer;
   state.previewProperty = null;
   state.selectedId = property.id;
   state.selectedPropertySnapshot = property;
+  if (!state.properties.some((entry) => isSameSavedProperty_(entry, property))) {
+    state.properties.unshift(property);
+  }
   state.map?.closePopup();
   render();
+  renderPropertyDetail();
   openSavedPropertyPopup_(property, options.latlng);
   refreshBuildingStyles();
 
@@ -1870,6 +1873,7 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
     const freshProperties = await loadPropertiesFromSheet_();
     const freshProperty = findFreshPropertyMatch_(freshProperties, property);
     if (freshProperty) {
+      ensurePropertyId_(freshProperty);
       const index = state.properties.findIndex((entry) => isSameSavedProperty_(entry, property));
       if (index >= 0) {
         state.properties[index] = freshProperty;
@@ -1884,6 +1888,17 @@ async function openSavedPropertyFromMap_(property, layer, options = {}) {
   } catch {
     // The local copy is still enough to open the detail card.
   }
+}
+
+function ensurePropertyId_(property) {
+  if (!property || property.id) {
+    return;
+  }
+
+  const addressPart = normalizeComparableText_(property.address).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const latPart = Number(property.lat || 0).toFixed(5);
+  const lngPart = Number(property.lng || 0).toFixed(5);
+  property.id = `map-${addressPart || "saved"}-${latPart}-${lngPart}`;
 }
 
 function findFreshPropertyMatch_(properties, property) {
