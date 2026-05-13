@@ -533,14 +533,22 @@ function renderPropertyDetail() {
       </div>
     </div>
     <div class="map-detail-notes">${escapeHtml(property.notes || "No notes yet.")}</div>
-      <div class="map-detail-actions">
-        <button type="button" class="map-button map-button-secondary" data-edit-property="${escapeHtml(property.id)}">Load into form</button>
-        <button type="button" class="map-button map-button-secondary" data-clear-color="${escapeHtml(property.id)}">Clear color</button>
-        <button type="button" class="map-button map-button-secondary" data-open-map="${escapeHtml(property.id)}">Open map</button>
-        <button type="button" class="map-button map-button-secondary" data-delete-property="${escapeHtml(property.id)}">Delete property</button>
-      </div>
+    <label class="map-detail-note-composer">
+      <span>New Note</span>
+      <textarea data-property-note-input placeholder="Add a new note for this property."></textarea>
+    </label>
+    <div class="map-detail-actions">
+      <button type="button" class="map-button map-button-primary" data-save-property-note="${escapeHtml(property.id)}">Save note</button>
+      <button type="button" class="map-button map-button-secondary" data-edit-property="${escapeHtml(property.id)}">Load into form</button>
+      <button type="button" class="map-button map-button-secondary" data-clear-color="${escapeHtml(property.id)}">Clear color</button>
+      <button type="button" class="map-button map-button-secondary" data-open-map="${escapeHtml(property.id)}">Open map</button>
+      <button type="button" class="map-button map-button-secondary" data-delete-property="${escapeHtml(property.id)}">Delete property</button>
+    </div>
   `;
 
+  document.querySelector("[data-save-property-note]")?.addEventListener("click", () => {
+    void savePropertyDetailNote(property.id);
+  });
   document.querySelector("[data-edit-property]")?.addEventListener("click", () => loadPropertyIntoForm(property));
   document.querySelector("[data-clear-color]")?.addEventListener("click", () => {
     void clearPropertyColor(property.id);
@@ -551,6 +559,33 @@ function renderPropertyDetail() {
   document.querySelector("[data-delete-property]")?.addEventListener("click", () => {
     void deleteProperty(property.id);
   });
+}
+
+async function savePropertyDetailNote(propertyId) {
+  const property = state.properties.find((entry) => entry.id === propertyId);
+  const input = document.querySelector("[data-property-note-input]");
+  const note = String(input?.value || "").trim();
+
+  if (!property || !note) {
+    elements.mapStatusText.textContent = "Write a note first, then save it.";
+    return;
+  }
+
+  property.notes = [property.notes, note].filter((value) => String(value || "").trim()).join("\n\n");
+  elements.mapStatusText.textContent = "Saving property note...";
+
+  try {
+    const savedProperty = await savePropertyToSheet_(property);
+    Object.assign(property, savedProperty);
+  } catch (error) {
+    elements.mapStatusText.textContent = error.message || "Unable to save that note right now.";
+    return;
+  }
+
+  state.selectedId = property.id;
+  saveProperties();
+  render();
+  elements.mapStatusText.textContent = "Note saved.";
 }
 
 function renderStatusPill(status) {

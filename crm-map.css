@@ -246,6 +246,34 @@ body {
   background: rgba(255, 255, 255, 0.66);
   white-space: pre-wrap;
 }
+.map-detail-note-composer {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.map-detail-note-composer span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.map-detail-note-composer textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 14px 16px;
+  border: 1px solid rgba(64, 38, 26, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.55;
+  resize: vertical;
+}
+.map-detail-note-composer textarea:focus {
+  outline: 2px solid rgba(205, 168, 83, 0.34);
+  border-color: rgba(205, 168, 83, 0.46);
+}
 .map-detail-copy {
   margin: 0 0 18px;
   color: var(--muted);
