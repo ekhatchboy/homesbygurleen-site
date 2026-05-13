@@ -595,10 +595,11 @@ function handleSavedPropertyPointerUp_(event) {
 }
 
 function openSavedPropertyOnHover_(property, layer, latlng) {
-  if (!property?.id || state.selectedId === property.id) {
+  if (!property) {
     return;
   }
 
+  ensurePropertyId_(property);
   state.selectedBuildingLayer = layer || state.selectedBuildingLayer;
   state.previewProperty = null;
   state.selectedId = property.id;
@@ -606,6 +607,7 @@ function openSavedPropertyOnHover_(property, layer, latlng) {
   renderPropertyDetail();
   openSavedPropertyPopup_(property, latlng);
   refreshBuildingStyles();
+  elements.mapStatusText.textContent = "Saved property opened.";
 }
 
 function highlightBuilding(polygon) {
@@ -1982,7 +1984,7 @@ function openSavedPropertyPopup_(property, latlng) {
   L.popup({
     closeButton: true,
     autoClose: true,
-    closeOnClick: true,
+    closeOnClick: false,
     className: "map-preview-leaflet-popup"
   })
     .setLatLng(popupLocation)
